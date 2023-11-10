@@ -48,7 +48,7 @@ rule make_1kG_unrelated_sample_files:
          all = "results/1kG/{assembly}/all.samples"
      localrule: True
      conda:
-         env_path("pid_cfdr_pipeline.yaml")
+         env_path("1kGP_pipeline.yaml")
      script:
         script_path("write_1kG_sample_files.R")
 
