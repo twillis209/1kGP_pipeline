@@ -91,13 +91,13 @@ rule retain_snps_only:
 
 rule merge_pgen_files:
     input:
-        expand("results/1kG/{{assembly}}/{{ancestry}}/snps_only/{chr}.{ext}", chr = [f"chr{x}" for x in range(1,23)]+["chrX"], ext = ["pgen", "pvar.zst", "psam"])
+        expand("results/1kG/{{assembly}}/{{ancestry}}/{variant_type}/{chr}.{ext}", chr = [f"chr{x}" for x in range(1,23)]+["chrX"], ext = ["pgen", "pvar.zst", "psam"])
     output:
-        protected(multiext("results/1kG/{assembly}/{ancestry}/snps_only/merged", ".pgen", ".pvar.zst", ".psam")),
-        pmerge_file = "results/1kG/{assembly}/{ancestry}/snps_only/pmerge.txt"
+        protected(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/merged", ".pgen", ".pvar.zst", ".psam")),
+        pmerge_file = "results/1kG/{assembly}/{ancestry}/{variant_type}/pmerge.txt"
     params:
-        in_dir = "results/1kG/{assembly}/{ancestry}/snps_only",
-        out_stem = "results/1kG/{assembly}/{ancestry}/snps_only/merged",
+        in_dir = "results/1kG/{assembly}/{ancestry}/{variant_type}",
+        out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/merged",
         max_allele_ct = 2
     threads: 16
     resources:
@@ -150,11 +150,11 @@ rule compute_maf:
 
 rule write_out_merged_bed_format_files:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/snps_only/merged", ".pgen", ".pvar.zst", ".psam"),
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/merged", ".pgen", ".pvar.zst", ".psam"),
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/snps_only/merged", ".bed", ".bim", ".fam"))
+        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/merged", ".bed", ".bim", ".fam"))
     params:
-        in_stem = "results/1kG/{assembly}/{ancestry}/snps_only/merged",
+        in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/merged",
     threads: 16
     resources:
         mem_mb = get_mem_mb,
@@ -166,14 +166,14 @@ rule write_out_merged_bed_format_files:
 
 rule qc:
      input:
-         multiext("results/1kG/{assembly}/{ancestry}/snps_only/merged", ".pgen", ".pvar.zst", ".psam")
+         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/merged", ".pgen", ".pvar.zst", ".psam")
      output:
-         multiext("results/1kG/{assembly}/{ancestry}/snps_only/qc/merged", ".pgen", ".pvar.zst", ".psam")
+         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/qc/merged", ".pgen", ".pvar.zst", ".psam")
      log:
-         log = "results/1kG/{assembly}/{ancestry}/snps_only/qc/merged.log"
+         log = "results/1kG/{assembly}/{ancestry}/{variant_type}/qc/merged.log"
      params:
-        in_stem = "results/1kG/{assembly}/{ancestry}/snps_only/merged",
-        out_stem = "results/1kG/{assembly}/{ancestry}/snps_only/qc/merged",
+        in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/merged",
+        out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/qc/merged",
         geno = 0.01,
         mind = 0.01,
         hwe = 1e-50
@@ -231,11 +231,11 @@ rule remove_at_gc_snps:
 
 rule copy_to_all_variant_set:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/snps_only/qc/merged", ".pgen", ".pvar.zst", ".psam")
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/qc/merged", ".pgen", ".pvar.zst", ".psam")
     output:
-        multiext("results/1kG/{assembly}/{ancestry}/snps_only/qc/all/merged", ".pgen", ".pvar.zst", ".psam")
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/qc/all/merged", ".pgen", ".pvar.zst", ".psam")
     params:
-        out = "results/1kG/{assembly}/{ancestry}/snps_only/qc/all"
+        out = "results/1kG/{assembly}/{ancestry}/{variant_type}/qc/all"
     threads: 1
     resources:
         mem_mb = get_mem_mb
@@ -245,14 +245,14 @@ rule copy_to_all_variant_set:
         cp {input} {params.out}
         """
 
-rule convert_qced_snp_data_to_bfile_format:
+rule convert_qced_data_to_bfile_format:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/snps_only/qc/all/merged", ".pgen", ".pvar.zst", ".psam")
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/qc/all/merged", ".pgen", ".pvar.zst", ".psam")
     output:
-        multiext("results/1kG/{assembly}/{ancestry}/snps_only/qc/all/merged", ".bed", ".bim", ".fam")
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/qc/all/merged", ".bed", ".bim", ".fam")
     params:
-        in_stem = "results/1kG/{assembly}/{ancestry}/snps_only/qc/all/merged",
-        out_stem = "results/1kG/{assembly}/{ancestry}/snps_only/qc/all/merged"
+        in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/qc/all/merged",
+        out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/qc/all/merged"
     threads: 16
     resources:
         mem_mb = get_mem_mb
@@ -265,12 +265,12 @@ rule convert_qced_snp_data_to_bfile_format:
 
 rule create_pruned_ranges:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/snps_only/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam")
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam")
     output:
-        multiext("results/1kG/{assembly}/{ancestry}/snps_only/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged", ".prune.in", ".prune.out")
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged", ".prune.in", ".prune.out")
     params:
-        in_stem = "results/1kG/{assembly}/{ancestry}/snps_only/qc/{variant_set}/merged",
-        out_stem = "results/1kG/{assembly}/{ancestry}/snps_only/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged",
+        in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/qc/{variant_set}/merged",
+        out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged",
         r2 = lambda wildcards: wildcards.r2.replace('_', '.'),
     threads: 16
     resources:
@@ -281,15 +281,15 @@ rule create_pruned_ranges:
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --indep-pairwise {wildcards.window_size} 1 {params.r2} --out {params.out_stem}"
 
-rule prune_snps:
+rule prune_variants:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/snps_only/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam"),
-        range_file = "results/1kG/{assembly}/{ancestry}/snps_only/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.prune.out"
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam"),
+        range_file = "results/1kG/{assembly}/{ancestry}/{variant_type}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.prune.out"
     output:
-        multiext("results/1kG/{assembly}/{ancestry}/snps_only/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged", ".pgen", ".psam", ".pvar.zst")
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged", ".pgen", ".psam", ".pvar.zst")
     params:
-        in_stem = "results/1kG/{assembly}/{ancestry}/snps_only/qc/{variant_set}/merged",
-        out_stem = "results/1kG/{assembly}/{ancestry}/snps_only/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged"
+        in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/qc/{variant_set}/merged",
+        out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged"
     threads: 16
     resources:
         mem_mb = get_mem_mb
