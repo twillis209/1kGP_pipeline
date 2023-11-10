@@ -1,0 +1,19 @@
+import pandas as pd
+
+# Gets script path relative to location of Snakefile given by workflow.basedir
+def script_path(script):
+    return os.path.join(workflow.basedir, "scripts", script)
+
+def env_path(env):
+    return os.path.join(workflow.basedir, "envs", env)
+
+def get_vcf_sha256(w):
+    daf = pd.read_csv(f"resources/1kG/{w.assembly}/sha256.tsv", sep = '\t', names = ['sha256', 'File'])
+
+    return daf[daf.File.str.match(f'{w.chr}.vcf.gz')].sha256.values[0]
+
+include: "rules/hg19.smk"
+include: "rules/hg38.smk"
+# Assembly-agnostic rules
+include: "rules/assembly_ag.smk"
+include: "rules/wildcard_constraints.smk"
