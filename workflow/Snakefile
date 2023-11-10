@@ -3,13 +3,6 @@ import pandas as pd
 def get_mem_mb(wildcards, threads):
     return threads * 3420
 
-# Gets script path relative to location of Snakefile given by workflow.basedir
-def script_path(script):
-    return os.path.join(workflow.basedir, "scripts", script)
-
-def env_path(env):
-    return os.path.join(workflow.basedir, "envs", env)
-
 def get_vcf_sha256(w):
     daf = pd.read_csv(f"resources/1kG/{w.assembly}/sha256.tsv", sep = '\t', names = ['sha256', 'File'])
 

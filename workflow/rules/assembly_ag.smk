@@ -48,10 +48,10 @@ rule make_1kG_unrelated_sample_files:
          all = "results/1kG/{assembly}/all.samples"
      localrule: True
      conda:
-         env_path("1kGP_pipeline.yaml")
+         "../envs/1kGP_pipeline.yaml"
      script:
-        script_path("write_1kG_sample_files.R")
-
+        "../scripts/write_1kG_sample_files.R"
+ 
 rule get_ancestry_specific_samples:
      input:
         multiext("results/1kG/{assembly}/{chr}", ".pgen", ".pvar.zst", ".psam"),
