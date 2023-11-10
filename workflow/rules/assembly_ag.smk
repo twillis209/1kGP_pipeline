@@ -19,7 +19,8 @@ rule make_1kG_sex_file:
 rule vcf_to_pgen:
     input:
         vcf = "resources/1kG/{assembly}/{chr}.vcf.gz",
-        sex = "results/1kG/{assembly}/sex.tsv"
+        sex = "results/1kG/{assembly}/sex.tsv",
+        ref = "resources/genome_reference/{assembly}.fa.zst"
     output:
         temp(multiext("results/1kG/{assembly}/{chr}", ".pgen", ".pvar.zst", ".psam"))
     params:
@@ -31,40 +32,7 @@ rule vcf_to_pgen:
         mem_mb=get_mem_mb
     group: "1kG"
     shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --vcf {input.vcf} --make-pgen vzs --out {params.out} --set-all-var-ids {params.id_format} --max-alleles 2 --new-id-max-allele-len {params.max_allele_len} truncate --update-sex {input.sex} --split-par '{wildcards.assembly}'"
-
-rule pgen_to_hap_and_legend:
-    input:
-        multiext("results/1kG/{assembly}/{chr}", ".pgen", ".pvar.zst", ".psam")
-    output:
-        temp(multiext("results/1kG/{assembly}/{chr}", ".haps", ".legend", ".sample"))
-    params:
-        stem = "results/1kG/{assembly}/{chr}",
-    threads: 8
-    resources:
-        mem_mb=get_mem_mb
-    group: "1kG"
-    shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.stem} vzs --export hapslegend --out {params.stem}"
-
-rule concatenate_legend_files:
-    input:
-        expand("results/1kG/{{assembly}}/{chr}.legend", chr = [f"chr{x}" for x in range(1,23)])
-    output:
-        "results/1kG/{assembly}/combined.legend.gz"
-    params:
-        uncompressed_output = "results/1kG/{assembly}/combined.legend"
-    resources:
-        runtime = 20
-    group: "1kG"
-    shell:
-        """
-        for x in {input}; do
-            tail -n +2 $x >>{params.uncompressed_output}
-        done
-
-        gzip {params.uncompressed_output}
-        """
+        "plink2 --memory {resources.mem_mb} --threads {threads} --vcf {input.vcf} --make-pgen vzs --fa {input.ref} --ref-from-fa 'force' --out {params.out} --set-all-var-ids {params.id_format} --max-alleles 2 --new-id-max-allele-len {params.max_allele_len} truncate --update-sex {input.sex} --split-par '{wildcards.assembly}'"
 
 rule make_1kG_unrelated_sample_files:
      input:
@@ -102,10 +70,9 @@ rule get_ancestry_specific_samples:
      shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --keep {input.sample_file} --make-pgen vzs --out {params.out_stem} &>{log.log}"
 
-rule retain_snps_only_and_correct_ref_alt:
+rule retain_snps_only:
     input:
         multiext("results/1kG/{assembly}/{ancestry}/{chr}", ".pgen", ".pvar.zst", ".psam"),
-        ref = "resources/genome_reference/{assembly}.fa.zst"
     output:
         temp(multiext("results/1kG/{assembly}/{ancestry}/snps_only/{chr}", ".pgen", ".pvar.zst", ".psam"))
     params:
@@ -117,7 +84,7 @@ rule retain_snps_only_and_correct_ref_alt:
         mem_mb=get_mem_mb
     group: "1kG"
     shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --fa {input.ref} --ref-from-fa 'force' --snps-only 'just-acgt' --rm-dup 'force-first' --maf {params.maf} --make-pgen vzs --out {params.out_stem}"
+        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --snps-only 'just-acgt' --rm-dup 'force-first' --maf {params.maf} --make-pgen vzs --out {params.out_stem}"
 
 rule merge_pgen_files:
     input:
@@ -144,18 +111,33 @@ rule merge_pgen_files:
         plink2 --memory {resources.mem_mb} --threads {threads} --pmerge-list {output.pmerge_file} pfile-vzs --pmerge-list-dir {params.in_dir} --merge-max-allele-ct {params.max_allele_ct} --pmerge-output-vzs --out {params.out_stem}
     """
 
-rule compute_maf:
+rule pgen_to_hap_and_legend:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/snps_only/merged", ".pgen", ".pvar.zst", ".psam")
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/merged", ".pgen", ".pvar.zst", ".psam")
     output:
-        "results/1kG/{assembly}/{ancestry}/snps_only/merged.afreq"
+        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/merged", ".haps", ".legend", ".sample"))
     params:
-        in_stem = "results/1kG/{assembly}/{ancestry}/snps_only/merged",
-        out_stem = "results/1kG/{assembly}/{ancestry}/snps_only/merged",
+        stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/merged"
     threads: 16
     resources:
         mem_mb = get_mem_mb,
-        runtime = 5
+        runtime = 120
+    group: "1kG"
+    shell:
+        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.stem} vzs --export hapslegend --out {params.stem}"
+
+rule compute_maf:
+    input:
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/merged", ".pgen", ".pvar.zst", ".psam")
+    output:
+        "results/1kG/{assembly}/{ancestry}/{variant_type}/merged.afreq"
+    params:
+        in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/merged",
+        out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/merged",
+    threads: 16
+    resources:
+        mem_mb = get_mem_mb,
+        runtime = 120
     group: "1kG"
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --freq --out {params.out_stem}"
