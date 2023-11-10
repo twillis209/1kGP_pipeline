@@ -91,7 +91,7 @@ rule retain_snps_only:
 
 rule merge_pgen_files:
     input:
-        expand("results/1kG/{{assembly}}/{{ancestry}}/{variant_type}/{chr}.{ext}", chr = [f"chr{x}" for x in range(1,23)]+["chrX"], ext = ["pgen", "pvar.zst", "psam"])
+        expand("results/1kG/{{assembly}}/{{ancestry}}/{{variant_type}}/{chr}.{ext}", chr = [f"chr{x}" for x in range(1,23)]+["chrX"], ext = ["pgen", "pvar.zst", "psam"])
     output:
         protected(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/merged", ".pgen", ".pvar.zst", ".psam")),
         pmerge_file = "results/1kG/{assembly}/{ancestry}/{variant_type}/pmerge.txt"
@@ -117,11 +117,11 @@ rule merge_pgen_files:
 
 rule pgen_to_hap_and_legend:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/merged", ".pgen", ".pvar.zst", ".psam")
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{chr}", ".pgen", ".pvar.zst", ".psam")
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/merged", ".haps", ".legend", ".sample"))
+        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{chr}", ".haps", ".legend", ".sample"))
     params:
-        stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/merged"
+        stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{chr}"
     threads: 16
     resources:
         mem_mb = get_mem_mb,
@@ -130,6 +130,25 @@ rule pgen_to_hap_and_legend:
     conda: "../envs/1kGP_pipeline.yaml"
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.stem} vzs --export hapslegend --out {params.stem}"
+
+rule concatenate_legend_files:
+    input:
+        expand("results/1kG/{{assembly}}/{{ancestry}}/{{variant_type}}/{chr}.legend", chr = [f"chr{{x}}" for x in range(1,23)]+['chrX'])
+    output:
+        "results/1kG/{assembly}/{ancestry}/{variant_type}/combined.legend"
+    params:
+        uncompressed_output = "results/1kG/{assembly}/{ancestry}/{variant_type}/combined.legend"
+    resources:
+        runtime = 20
+    group: "1kG"
+    shell:
+        """
+        for x in {input}; do
+        tail -n +2 $x >>{params.uncompressed_output}
+        done
+
+        gzip {params.uncompressed_output}
+        """
 
 rule compute_maf:
     input:
