@@ -5,7 +5,7 @@ rule make_1kG_sex_file:
         "results/1kG/{assembly}/sex.tsv"
     localrule: True
     run:
-        ped = pd.read_csv(input[0], sep = '\t', header = 0)
+        ped = pd.read_csv(input[0], sep = ' ', header = 0)
 
         if wildcards.assembly == 'hg19':
             ped = ped[['Family ID', 'Individual ID', 'Gender']]
@@ -31,6 +31,7 @@ rule vcf_to_pgen:
     resources:
         mem_mb=get_mem_mb
     group: "1kG"
+    conda: "../envs/1kGP_pipeline.yaml"
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --vcf {input.vcf} --make-pgen vzs --fa {input.ref} --ref-from-fa 'force' --out {params.out} --set-all-var-ids {params.id_format} --max-alleles 2 --new-id-max-allele-len {params.max_allele_len} truncate --update-sex {input.sex} --split-par '{wildcards.assembly}'"
 
@@ -51,7 +52,7 @@ rule make_1kG_unrelated_sample_files:
          "../envs/1kGP_pipeline.yaml"
      script:
         "../scripts/write_1kG_sample_files.R"
- 
+
 rule get_ancestry_specific_samples:
      input:
         multiext("results/1kG/{assembly}/{chr}", ".pgen", ".pvar.zst", ".psam"),
@@ -67,6 +68,7 @@ rule get_ancestry_specific_samples:
      resources:
         mem_mb=get_mem_mb
      group: "1kG"
+     conda: "../envs/1kGP_pipeline.yaml"
      shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --keep {input.sample_file} --make-pgen vzs --out {params.out_stem} &>{log.log}"
 
@@ -83,6 +85,7 @@ rule retain_snps_only:
     resources:
         mem_mb=get_mem_mb
     group: "1kG"
+    conda: "../envs/1kGP_pipeline.yaml"
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --snps-only 'just-acgt' --rm-dup 'force-first' --maf {params.maf} --make-pgen vzs --out {params.out_stem}"
 
@@ -101,6 +104,7 @@ rule merge_pgen_files:
         mem_mb = get_mem_mb,
         runtime = 10
     group: "1kG"
+    conda: "../envs/1kGP_pipeline.yaml"
     shell: """
         for i in {{1..22}}; do
         echo "chr$i" >>{output.pmerge_file}
@@ -123,6 +127,7 @@ rule pgen_to_hap_and_legend:
         mem_mb = get_mem_mb,
         runtime = 120
     group: "1kG"
+    conda: "../envs/1kGP_pipeline.yaml"
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.stem} vzs --export hapslegend --out {params.stem}"
 
@@ -139,6 +144,7 @@ rule compute_maf:
         mem_mb = get_mem_mb,
         runtime = 120
     group: "1kG"
+    conda: "../envs/1kGP_pipeline.yaml"
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --freq --out {params.out_stem}"
 
@@ -154,6 +160,7 @@ rule write_out_merged_bed_format_files:
         mem_mb = get_mem_mb,
         runtime = 5
     group: "1kG"
+    conda: "../envs/1kGP_pipeline.yaml"
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --make-bed --out {params.in_stem}"
 
@@ -175,6 +182,7 @@ rule qc:
         mem_mb = get_mem_mb,
         runtime = 10
      group: "1kG"
+     conda: "../envs/1kGP_pipeline.yaml"
      shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --geno {params.geno} --mind {params.mind} --hwe {params.hwe} --make-pgen vzs --out {params.out_stem} &>{log.log}"
 
@@ -217,6 +225,7 @@ rule remove_at_gc_snps:
         mem_mb = get_mem_mb,
         runtime = 10
     group: "1kG"
+    conda: "../envs/1kGP_pipeline.yaml"
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --exclude {input.at_gc_variants} --make-pgen vzs --out {params.out_stem} &>{log.log}"
 
@@ -248,6 +257,7 @@ rule convert_qced_snp_data_to_bfile_format:
     resources:
         mem_mb = get_mem_mb
     group: "1kG"
+    conda: "../envs/1kGP_pipeline.yaml"
     shell:
         """
         plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --make-bfile --silent --out {params.out_stem}
@@ -267,6 +277,7 @@ rule create_pruned_ranges:
         mem_mb = get_mem_mb,
         runtime = 20
     group: "1kG"
+    conda: "../envs/1kGP_pipeline.yaml"
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --indep-pairwise {wildcards.window_size} 1 {params.r2} --out {params.out_stem}"
 
@@ -283,5 +294,6 @@ rule prune_snps:
     resources:
         mem_mb = get_mem_mb
     group: "1kG"
+    conda: "../envs/1kGP_pipeline.yaml"
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --exclude {input.range_file} --make-pgen vzs --out {params.out_stem}"

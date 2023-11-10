@@ -3,7 +3,7 @@ rule download_hg38_reference_sequence:
         ensure("resources/genome_reference/hg38.fa.zst", sha256 = "abf5670bf3de11a1e39176bc6596fb0597071e2be33ecae269855e502e1cdc53")
     resources:
         runtime = 30
-    group: "1kG"
+    localrule: True
     shell:
         """
         wget -O {output} https://www.dropbox.com/s/xyggouv3tnamh0j/GRCh38_full_analysis_set_plus_decoy_hla.fa.zst?dl=1
@@ -12,7 +12,7 @@ rule download_hg38_reference_sequence:
 rule download_1kG_hg38_manifest:
     output:
         temp("resources/1kG/hg38/manifest.tsv")
-    group: "1kG"
+    localrule: True
     shell:
         "wget -O {output} http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20201028_3202_phased/phased-manifest_July2021.tsv"
 
@@ -21,7 +21,7 @@ rule process_1kG_hg38_manifest:
         "resources/1kG/hg38/manifest.tsv"
     output:
         "results/1kG/hg38/processed_manifest.tsv"
-    group: "1kG"
+    localrule: True
     run:
         daf = pd.read_csv(input[0], sep = '\t', names = ['File', 'Byte', 'Checksum'])
 
@@ -47,7 +47,7 @@ rule download_1kG_hg38_genotype_data:
 rule download_1kG_hg38_sample_metadata:
      output:
         "resources/1kG/hg38/ped.txt"
-     group: "1kG"
+     localrule: True
      shell:
          "wget -O resources/1kG/hg38/ped.txt http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/20130606_g1k_3202_samples_ped_population.txt"
 
@@ -98,5 +98,6 @@ rule write_out_bed_format_files_with_cm_field:
         mem_mb = get_mem_mb,
         runtime = 5
     group: "1kG"
+    conda: "../envs/1kGP_pipeline.yaml"
     shell:
         "plink --memory {resources.mem_mb} --threads {threads} --bfile {params.in_stem} --cm-map {params.map_pattern} --make-bed --out {params.out_stem}"

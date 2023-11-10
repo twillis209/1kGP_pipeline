@@ -13,7 +13,7 @@ rule download_hg19_reference_sequence:
     params:
         compressed = "resources/genome_reference/hg19.fa.gz",
         uncompressed = "resources/genome_reference/hg19.fa"
-    group: "1kG"
+    localrule: True
     shell:
         """
         wget -O {params.compressed} ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/phase2_reference_assembly_sequence/hs37d5.fa.gz

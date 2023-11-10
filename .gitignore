@@ -1,2 +1,5 @@
 resources
 results
+logs
+submit_with_scheduling.sh
+.snakemake

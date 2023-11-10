@@ -8,3 +8,5 @@ dependencies:
 - scipy
 - r-base >= 4.2.3
 - r-data.table >= 1.14.8
+- plink
+- plink2
