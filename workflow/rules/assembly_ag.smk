@@ -22,7 +22,7 @@ rule vcf_to_pgen:
         sex = "results/1kG/{assembly}/sex.tsv",
         ref = "resources/genome_reference/{assembly}.fa.zst"
     output:
-        temp(multiext("results/1kG/{assembly}/{chr}", ".pgen", ".pvar.zst", ".psam"))
+        multiext("results/1kG/{assembly}/{chr}", ".pgen", ".pvar.zst", ".psam")
     params:
         out = "results/1kG/{assembly}/{chr}",
         id_format = "@:#:\$r:\$a",
@@ -58,7 +58,7 @@ rule get_ancestry_specific_samples:
         multiext("results/1kG/{assembly}/{chr}", ".pgen", ".pvar.zst", ".psam"),
         sample_file = "results/1kG/{assembly}/{ancestry}.samples"
      output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/{chr}", ".pgen", ".pvar.zst", ".psam")),
+        multiext("results/1kG/{assembly}/{ancestry}/{chr}", ".pgen", ".pvar.zst", ".psam")
      log:
         log = "results/1kG/{assembly}/{ancestry}/{chr}.log"
      params:
@@ -66,8 +66,7 @@ rule get_ancestry_specific_samples:
         out_stem = "results/1kG/{assembly}/{ancestry}/{chr}"
      threads: 8
      resources:
-        mem_mb = get_mem_mb,
-        runtime = 10
+        mem_mb = get_mem_mb
      group: "1kG"
      conda: "../envs/1kGP_pipeline.yaml"
      shell:
@@ -77,7 +76,7 @@ rule retain_snps_only:
     input:
         multiext("results/1kG/{assembly}/{ancestry}/{chr}", ".pgen", ".pvar.zst", ".psam"),
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/snps_only/{chr}", ".pgen", ".pvar.zst", ".psam"))
+        multiext("results/1kG/{assembly}/{ancestry}/snps_only/{chr}", ".pgen", ".pvar.zst", ".psam")
     params:
         in_stem = "results/1kG/{assembly}/{ancestry}/{chr}",
         out_stem = "results/1kG/{assembly}/{ancestry}/snps_only/{chr}",
@@ -102,8 +101,7 @@ rule merge_pgen_files:
         max_allele_ct = 2
     threads: 16
     resources:
-        mem_mb = get_mem_mb,
-        runtime = 10
+        mem_mb = get_mem_mb
     group: "1kG"
     conda: "../envs/1kGP_pipeline.yaml"
     shell: """
@@ -120,13 +118,12 @@ rule pgen_to_hap_and_legend:
     input:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{chr}", ".pgen", ".pvar.zst", ".psam")
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{chr}", ".haps", ".legend", ".sample"))
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{chr}", ".haps", ".legend", ".sample")
     params:
         stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{chr}"
     threads: 16
     resources:
-        mem_mb = get_mem_mb,
-        runtime = 120
+        mem_mb = get_mem_mb
     group: "1kG"
     conda: "../envs/1kGP_pipeline.yaml"
     shell:
@@ -160,7 +157,7 @@ rule compute_maf:
     threads: 16
     resources:
         mem_mb = get_mem_mb,
-        runtime = 120
+        runtime = 10
     group: "1kG"
     conda: "../envs/1kGP_pipeline.yaml"
     shell:
@@ -170,13 +167,12 @@ rule write_out_merged_bed_format_files:
     input:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/merged", ".pgen", ".pvar.zst", ".psam"),
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/merged", ".bed", ".bim", ".fam"))
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/merged", ".bed", ".bim", ".fam")
     params:
         in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/merged",
     threads: 16
     resources:
-        mem_mb = get_mem_mb,
-        runtime = 5
+        mem_mb = get_mem_mb
     group: "1kG"
     conda: "../envs/1kGP_pipeline.yaml"
     shell:
@@ -209,9 +205,7 @@ rule decompress_pvar_for_at_gc_snps:
         "results/1kG/{assembly}/{ancestry}/snps_only/qc/merged.pvar.zst"
     output:
         temp("results/1kG/{assembly}/{ancestry}/snps_only/qc/merged.pvar")
-    threads: 1
-    resources:
-        runtime = 120
+    localrule: True
     shell:
         "zstdcat {input} | grep -v '^#' >{output}"
 
