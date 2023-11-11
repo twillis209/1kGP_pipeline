@@ -66,7 +66,8 @@ rule get_ancestry_specific_samples:
         out_stem = "results/1kG/{assembly}/{ancestry}/{chr}"
      threads: 8
      resources:
-        mem_mb=get_mem_mb
+        mem_mb = get_mem_mb,
+        runtime = 10
      group: "1kG"
      conda: "../envs/1kGP_pipeline.yaml"
      shell:
@@ -133,14 +134,12 @@ rule pgen_to_hap_and_legend:
 
 rule concatenate_legend_files:
     input:
-        expand("results/1kG/{{assembly}}/{{ancestry}}/{{variant_type}}/{chr}.legend", chr = [f"chr{x}" for x in range(1,23)]+['chrX'])
+        expand("results/1kG/{{assembly}}/{{ancestry}}/{{variant_type}}/{chr}.legend", chr = [f"chr{x}" for x in range(1,23)])
     output:
-        "results/1kG/{assembly}/{ancestry}/{variant_type}/combined.legend"
+        "results/1kG/{assembly}/{ancestry}/{variant_type}/combined.legend.gz"
     params:
         uncompressed_output = "results/1kG/{assembly}/{ancestry}/{variant_type}/combined.legend"
-    resources:
-        runtime = 20
-    group: "1kG"
+    localrule: True
     shell:
         """
         for x in {input}; do
