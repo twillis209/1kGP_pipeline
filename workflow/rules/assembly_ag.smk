@@ -55,14 +55,14 @@ rule get_ancestry_specific_samples:
      output:
         temp(multiext("results/1kG/{assembly}/{ancestry}/{chr}", ".pgen", ".pvar.zst", ".psam"))
      log:
-        log = "results/1kG/{assembly}/{ancestry}/{chr}.log"
+        "results/1kG/{assembly}/{ancestry}/{chr}.log"
      params:
         in_stem = "results/1kG/{assembly}/{chr}",
         out_stem = "results/1kG/{assembly}/{ancestry}/{chr}"
      threads: 8
      group: "1kG"
      shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --keep {input.sample_file} --make-pgen vzs --out {params.out_stem} &>{log.log}"
+        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --keep {input.sample_file} --make-pgen vzs --out {params.out_stem} &>{log}"
 
         # NB: filters for MAF > 0.005
 rule retain_snps_only:
@@ -163,7 +163,7 @@ rule qc:
      output:
          temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam"))
      log:
-         log = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged.log"
+         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged.log"
      params:
         in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged",
         out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged",
@@ -175,7 +175,7 @@ rule qc:
         runtime = 10
      group: "1kG"
      shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --geno {params.geno} --mind {params.mind} --hwe {params.hwe} --make-pgen vzs --out {params.out_stem} &>{log.log}"
+        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --geno {params.geno} --mind {params.mind} --hwe {params.hwe} --make-pgen vzs --out {params.out_stem} &>{log}"
 
 rule decompress_pvar_for_at_gc_snps:
     input:
@@ -204,7 +204,7 @@ rule remove_at_gc_snps:
     output:
         multiext("results/1kG/{assembly}/{ancestry}/sans_at_gc_snps_only/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam")
     log:
-        log = "results/1kG/{assembly}/{ancestry}/sans_at_gc_snps_only/{maf}/qc/merged.log"
+        "results/1kG/{assembly}/{ancestry}/sans_at_gc_snps_only/{maf}/qc/merged.log"
     params:
         in_stem = "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/qc/merged",
         out_stem = "results/1kG/{assembly}/{ancestry}/sans_at_gc_snps_only/qc/merged"
@@ -213,7 +213,7 @@ rule remove_at_gc_snps:
         runtime = 10
     group: "1kG"
     shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --exclude {input.at_gc_variants} --make-pgen vzs --out {params.out_stem} &>{log.log}"
+        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --exclude {input.at_gc_variants} --make-pgen vzs --out {params.out_stem} &>{log}"
 
 rule copy_to_all_variant_set:
     input:
