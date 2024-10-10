@@ -72,6 +72,8 @@ rule retain_snps_only:
         multiext("results/1kG/{assembly}/{ancestry}/{chr}", ".pgen", ".pvar.zst", ".psam"),
     output:
         temp(multiext("results/1kG/{assembly}/{ancestry}/snps_only/{maf}/{chr}", ".pgen", ".pvar.zst", ".psam"))
+    log:
+        "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/{chr}.log"
     params:
         in_stem = "results/1kG/{assembly}/{ancestry}/{chr}",
         out_stem = "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/{chr}",
@@ -87,6 +89,8 @@ rule merge_pgen_files:
     output:
         protected(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged", ".pgen", ".pvar.zst", ".psam")),
         pmerge_file = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/pmerge.txt"
+    log:
+        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged.log"
     params:
         in_dir = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}",
         out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged",
@@ -108,6 +112,8 @@ rule pgen_to_hap_and_legend:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/{chr}", ".pgen", ".pvar.zst", ".psam")
     output:
         temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/{chr}", ".haps", ".legend", ".sample"))
+    log:
+        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/{chr}.log"
     params:
         stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/{chr}"
     threads: 16
@@ -137,6 +143,8 @@ rule compute_maf:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged", ".pgen", ".pvar.zst", ".psam")
     output:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged.afreq"
+    log:
+        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged.log"
     params:
         in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged",
         out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged",
@@ -152,6 +160,8 @@ rule write_out_merged_bed_format_files:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged", ".pgen", ".pvar.zst", ".psam"),
     output:
         temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged", ".bed", ".bim", ".fam"))
+    log:
+        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged.log"
     params:
         in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged",
     threads: 16
@@ -236,6 +246,8 @@ rule convert_qced_data_to_bfile_format:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged", ".pgen", ".pvar.zst", ".psam")
     output:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged", ".bed", ".bim", ".fam")
+    log:
+        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged.log"
     params:
         in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged",
         out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged"
@@ -251,6 +263,8 @@ rule create_pruned_ranges:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam")
     output:
         temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged", ".prune.in", ".prune.out"))
+    log:
+        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.log"
     params:
         in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged",
         out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged",
@@ -268,6 +282,8 @@ rule prune_variants:
         range_file = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.prune.out"
     output:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged", ".pgen", ".psam", ".pvar.zst")
+    log:
+        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.log"
     params:
         in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged",
         out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged"

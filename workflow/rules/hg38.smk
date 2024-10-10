@@ -88,6 +88,8 @@ rule write_out_bed_format_files_with_cm_field:
         map_files = [f"resources/1kG/hg38/genetic_map_hg38/chr{x}.txt" for x in list(range(1,23))+['X']]
     output:
         multiext("results/1kG/{assembly}/{ancestry}/snps_only/{maf}/merged_with_cm", ".bed", ".bim", ".fam")
+    log:
+        "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/merged_with_cm.log"
     params:
         in_stem = "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/merged",
         out_stem = "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/merged_with_cm",
