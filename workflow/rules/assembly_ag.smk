@@ -62,7 +62,7 @@ rule get_ancestry_specific_samples:
      threads: 8
      group: "1kG"
      shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --keep {input.sample_file} --make-pgen vzs --out {params.out_stem} &>{log}"
+        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --keep {input.sample_file} --make-pgen vzs --out {params.out_stem}"
 
         # NB: filters for MAF > 0.005
 rule retain_snps_only:
@@ -175,7 +175,7 @@ rule qc:
         runtime = 10
      group: "1kG"
      shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --geno {params.geno} --mind {params.mind} --hwe {params.hwe} --make-pgen vzs --out {params.out_stem} &>{log}"
+        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --geno {params.geno} --mind {params.mind} --hwe {params.hwe} --make-pgen vzs --out {params.out_stem}"
 
 rule decompress_pvar_for_at_gc_snps:
     input:
@@ -213,7 +213,7 @@ rule remove_at_gc_snps:
         runtime = 10
     group: "1kG"
     shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --exclude {input.at_gc_variants} --make-pgen vzs --out {params.out_stem} &>{log}"
+        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --exclude {input.at_gc_variants} --make-pgen vzs --out {params.out_stem}"
 
 rule copy_to_all_variant_set:
     input:
