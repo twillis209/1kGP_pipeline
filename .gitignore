@@ -4,3 +4,4 @@ logs
 submit_with_scheduling.sh
 .snakemake
 profile
+.wget-hsts

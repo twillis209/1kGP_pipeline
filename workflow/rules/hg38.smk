@@ -70,7 +70,6 @@ rule write_out_per_chrom_hg38_recombination_map_files:
     localrule: True
     threads: 1
     resources:
-        mem_mb = get_mem_mb,
         runtime = 20
     shell:
         """
@@ -95,9 +94,7 @@ rule write_out_bed_format_files_with_cm_field:
         map_pattern = "resources/1kG/hg38/genetic_map_hg38/chr@.txt"
     threads: 16
     resources:
-        mem_mb = get_mem_mb,
         runtime = 5
     group: "1kG"
-    conda: "../envs/1kGP_pipeline.yaml"
     shell:
         "plink --memory {resources.mem_mb} --threads {threads} --bfile {params.in_stem} --cm-map {params.map_pattern} --make-bed --out {params.out_stem}"

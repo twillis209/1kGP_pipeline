@@ -1,7 +1,6 @@
 import pandas as pd
 
-def get_mem_mb(wildcards, threads):
-    return threads * 3420
+container: "docker://twillis209/1kgp-pipeline:latest"
 
 def get_vcf_sha256(w):
     daf = pd.read_csv(f"resources/1kG/{w.assembly}/sha256.tsv", sep = '\t', names = ['sha256', 'File'])
