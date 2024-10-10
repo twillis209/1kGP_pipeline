@@ -24,7 +24,7 @@ rule vcf_to_pgen:
     output:
         temp(multiext("results/1kG/{assembly}/{chr}", ".pgen", ".pvar.zst", ".psam"))
     log:
-        "results/1kG/{assembly}/{ancestry}/{chr}.log"
+        "results/1kG/{assembly}/{chr}.log"
     params:
         out = "results/1kG/{assembly}/{chr}",
         id_format = "@:#:\$r:\$a",
