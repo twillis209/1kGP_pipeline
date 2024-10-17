@@ -1,7 +1,7 @@
 # Pipeline for processing 1000 Genomes Phase 3 data sets
 
 This is a `snakemake` pipeline for downloading and processing the [1000 Genomes Project (1kGP) Phase 3 data sets](https://www.internationalgenome.org/category/phase-3/) for use in genomic analyses. Ideally, you would integrate this into another workflow with the use of `snakemake`'s `module` statement, although you can use it in its own right, too. The workflow contains rules which will:
-* download the raw sequence data (and verify their checksums) and update their gender identifier
+* download the raw sequence data and verify their checksums
 * filter samples by ancestry
 * remove related samples
 * filter variants to retain SNPs only
@@ -35,3 +35,9 @@ default-resources:
   mem_mb: threads * 3420
 ```
 This allows for more parsimonious rules in the `smk` files. In my experience, the `plink`-based rules will generally run faster the more you pump up the thread count.
+
+# Outstanding issues (17/10/24)
+
+I am able to run this locally, but the cluster I use seems not to allow `plink` to create log files. I hope this is just some idiosyncrasy of cluster configuration, but it may relate to `apptainer`'s interaction with the file system, something that can be configured via the `snakemake` CLI. I'm in the process of troubleshooting this.
+
+If you happen upon this repo and have a problem, please open an issue.
