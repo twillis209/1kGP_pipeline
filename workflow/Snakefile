@@ -1,7 +1,10 @@
 from snakemake.utils import min_version
 min_version("8.20")
 
-conda: "envs/global.yaml"
+def env_path(env):
+    return os.path.join(workflow.basedir, "envs", env)
+
+conda: env_path("global.yaml")
 
 # NB: This is in the global env above
 import pandas as pd
@@ -11,7 +14,7 @@ container: "docker://twillis209/1kgp-pipeline:latest"
 def get_vcf_sha256(w):
     daf = pd.read_csv(f"resources/1kG/{w.assembly}/sha256.tsv", sep = '\t', names = ['sha256', 'File'])
 
-    return daf[daf.File.str.match(f'{w.chr}.vcf.gz')].sha256.values[0]
+return daf[daf.File.str.match(f'{w.chr}.vcf.gz')].sha256.values[0]
 
 include: "rules/hg19.smk"
 include: "rules/hg38.smk"
