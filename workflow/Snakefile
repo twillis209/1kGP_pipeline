@@ -1,3 +1,7 @@
+from snakemake.utils import min_version
+
+min_version("8.20")
+
 import pandas as pd
 
 container: "docker://twillis209/1kgp-pipeline:latest"
