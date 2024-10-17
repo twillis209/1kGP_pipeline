@@ -10,6 +10,7 @@ This is a `snakemake` pipeline for downloading and processing the [1000 Genomes 
 * filter variants to remove AT/GC SNPs
 * prune variants by LD
 * remove the MHC
+* add the centimorgan field to `plink`-style bfiles (currently only for `hg38`) for the calculation of LD scores
 
 Of course, there's much more you can do with these data and `plink`, but I intend this workflow to be a 'stub' of sorts which can be extended in the downstream direction with additional rules after import as a `module`. Hopefully these rules suffice to get you started.
 
