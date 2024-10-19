@@ -26,6 +26,7 @@ Dependencies for the software are provided in a `docker` container [hosted on Do
 software-deployment-method: "apptainer"
 software-deployment-method: "conda"
 ```
+At the moment, the `conda` statement required to inject this dependency into the `snakemake` process running the workflow is omitted as it appears not to play nicely with the `module` statement I use to import this workflow into other workflows (e.g. the [`GWAS_tools`](https://github.com/twillis209/GWAS_tools)), so I'm afraid you'll have to have `pandas` in whichever environment `snakemake` is running in.
 
 I don't define the `mem_mb` resource for each rule as that number is highly platform-specific, but I do recommend setting it as follows in your profile:
 ```
@@ -42,5 +43,7 @@ This allows for more parsimonious rules in the `smk` files. In my experience, th
 # Outstanding issues (17/10/24)
 
 I am able to run this locally, but the cluster I use seems not to allow `plink` to create log files. I hope this is just some idiosyncrasy of cluster configuration, but it may relate to `apptainer`'s interaction with the file system, something that can be configured via the `snakemake` CLI. I'm in the process of troubleshooting this.
+
+I also need to reintroduce the `conda` statement used to inject the `envs/global.yaml` dependencies into the `snakemake` process for the sake of `run` blocks.
 
 If you happen upon this repo and have a problem, please open an issue.

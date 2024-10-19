@@ -27,7 +27,7 @@ rule vcf_to_pgen:
         "results/1kG/{assembly}/{chr}.log"
     params:
         out = "results/1kG/{assembly}/{chr}",
-        id_format = "@:#:\$r:\$a",
+        id_format = r"@:#:\$r:\$a",
         max_allele_len = 20
     threads: 8
     group: "1kG"

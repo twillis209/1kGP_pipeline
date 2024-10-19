@@ -29,9 +29,9 @@ rule process_1kG_hg38_manifest:
     run:
         daf = pd.read_csv(input[0], sep = '\t', names = ['File', 'Byte', 'Checksum'])
 
-        daf = daf[daf.File.str.match('.+\.vcf\.gz$')]
+        daf = daf[daf.File.str.match(r'.+\.vcf\.gz$')]
 
-        daf = daf.assign(Chr=daf.File.str.extract('.+chr(\w+)\.filtered.+'))
+        daf = daf.assign(Chr=daf.File.str.extract(r'.+chr(\w+)\.filtered.+'))
 
         daf.to_csv(output[0], sep = '\t', index = False)
 
