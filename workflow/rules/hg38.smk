@@ -1,4 +1,6 @@
 rule download_hg38_reference_sequence:
+    input:
+        "workflow/resources/1kG/hg38/sha256.tsv"
     output:
         ensure("resources/genome_reference/hg38.fa.zst", sha256 = "abf5670bf3de11a1e39176bc6596fb0597071e2be33ecae269855e502e1cdc53")
     params:
@@ -36,8 +38,6 @@ rule process_1kG_hg38_manifest:
         daf.to_csv(output[0], sep = '\t', index = False)
 
 rule download_1kG_hg38_genotype_data:
-    input:
-        "resources/1kG/hg38/sha256.tsv"
     output:
         protected(ensure("resources/1kG/{assembly,hg38}/{chr}.vcf.gz", sha256 = get_vcf_sha256))
     params:
