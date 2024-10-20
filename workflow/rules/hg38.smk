@@ -37,7 +37,7 @@ rule process_1kG_hg38_manifest:
 
 rule download_1kG_hg38_genotype_data:
     output:
-        lambda w: protected(ensure("resources/1kG/{assembly,hg38}/{chr}.vcf.gz", sha256 = config.get('sha256').get('hg38').get(w.chr)))
+        protected(ensure("resources/1kG/{assembly,hg38}/{chr}.vcf.gz", sha256 = get_vcf_sha256))
     params:
         chrX_url = "http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20201028_3202_phased/CCDG_14151_B01_GRM_WGS_2020-08-05_chrX.filtered.eagle2-phased.v2.vcf.gz",
         autosome_url = lambda w: f"http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20201028_3202_phased/CCDG_14151_B01_GRM_WGS_2020-08-05_{w.chr}.filtered.shapeit2-duohmm-phased.vcf.gz"

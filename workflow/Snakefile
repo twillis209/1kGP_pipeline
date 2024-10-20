@@ -11,6 +11,9 @@ container: "docker://twillis209/1kgp-pipeline:latest"
 
 configfile: workflow.source_path("config/config.yaml")
 
+def get_vcf_sha256(wildcards):
+    return config.get('sha256').get(wildcards.assembly).get(wildcards.chr)
+
 include: "rules/hg19.smk"
 include: "rules/hg38.smk"
 # Assembly-agnostic rules
