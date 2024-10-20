@@ -25,10 +25,8 @@ rule download_hg19_reference_sequence:
         """
 
 rule download_1kG_hg19_genotype_data:
-    input:
-        workflow.source_path("../resources/1kG/hg19/sha256.tsv")
     output:
-        protected(ensure("resources/1kG/{assembly,hg19}/{chr}.vcf.gz", sha256 = get_vcf_sha256))
+        lambda w: protected(ensure("resources/1kG/{assembly,hg19}/{chr}.vcf.gz", sha256 = config.get('sha256').get('hg19').get(w.chr)))
     params:
         chrX_url = "http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1c.20130502.genotypes.vcf.gz",
         chrY_url = "http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chrY.phase3_integrated_v2b.20130502.genotypes.vcf.gz",
