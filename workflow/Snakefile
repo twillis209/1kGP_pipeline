@@ -4,6 +4,8 @@ min_version("8.20")
 #def env_path(env):
 #    return os.path.join(workflow.basedir, "envs", env)
 
+conda: workflow.source_path("envs/global.yaml")
+
 # NB: This is in the global env above
 import pandas as pd
 
