@@ -37,7 +37,7 @@ rule process_1kG_hg38_manifest:
 
 rule download_1kG_hg38_genotype_data:
     input:
-        workflow.source.path("../resources/1kG/hg38/sha256.tsv")
+        workflow.source_path("../resources/1kG/hg38/sha256.tsv")
     output:
         protected(ensure("resources/1kG/{assembly,hg38}/{chr}.vcf.gz", sha256 = get_vcf_sha256))
     params:
