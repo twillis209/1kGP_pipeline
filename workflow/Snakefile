@@ -10,7 +10,7 @@ import pandas as pd
 container: "docker://twillis209/1kgp-pipeline:latest"
 
 def get_vcf_sha256(w):
-    daf = pd.read_csv(f"workflow/resources/1kG/{w.assembly}/sha256.tsv", sep = '\t', names = ['sha256', 'File'])
+    daf = pd.read_csv(workflow.source_path(f"resources/1kG/{w.assembly}/sha256.tsv"), sep = '\t', names = ['sha256', 'File'])
 
     return daf[daf.File.str.match(f'{w.chr}.vcf.gz')].sha256.values[0]
 
