@@ -9,7 +9,7 @@ import pandas as pd
 
 container: "docker://twillis209/1kgp-pipeline:latest"
 
-configfile: workflow.source_path("config/config.yaml")
+configfile: "workflow/config/config.yaml"
 
 def get_vcf_sha256(wildcards):
     return config.get('sha256').get(wildcards.assembly).get(wildcards.chr)
