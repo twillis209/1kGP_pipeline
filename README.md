@@ -52,6 +52,10 @@ module kGP_pipeline:
 
 The config handling is currently a bit hacky: rather than the module reading its own config file (i.e. the one in `1kGP_pipeline/workflow/config/config.yaml`), I have to copy the contents of that file to the config file for `GWAS_tools` and reference that when overwriting the `1kGP_pipeline` config with the `config:` statement. This doesn't scale very well when importing `GWAS_tools` into still larger workflows as I like to do, but I'm optimistic I can find a better solution within `snakemake`.
 
+## A version without containers
+
+At present I'm not able to resolve the issue I describe below relating to log files in my current HPC environment, so have had to roll back the containerisation in the dedicated `conda` branch.
+
 # Outstanding issues (17/10/24)
 
 I am able to run this locally, but the cluster I use seems not to allow `plink` to create log files. I hope this is just some idiosyncrasy of cluster configuration, but it may relate to `apptainer`'s interaction with the file system, something that can be configured via the `snakemake` CLI. I'm in the process of troubleshooting this and apparently [I'm not the only one with this issue](https://github.com/snakemake/snakemake/issues/2959).
