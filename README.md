@@ -40,10 +40,20 @@ default-resources:
 ```
 This allows for more parsimonious rules in the `smk` files. In my experience, the `plink`-based rules will generally run faster the more you pump up the thread count.
 
+## Importing this workflow in another `snakemake` workflow using `module`
+
+I wrote this workflow so it could be plugged into others with use of the `module` statement. I do this like so in the [`GWAS_tools` worfklow](https://github.com/twillis209/GWAS_tools):
+
+```
+module kGP_pipeline:
+    snakefile: github("twillis209/1kGP_pipeline", path = "workflow/Snakefile", commit = 'master')
+    config: config['1kGP_pipeline']
+```
+
+The config handling is currently a bit hacky: rather than the module reading its own config file (i.e. the one in `1kGP_pipeline/workflow/config/config.yaml`), I have to copy the contents of that file to the config file for `GWAS_tools` and reference that when overwriting the `1kGP_pipeline` config with the `config:` statement. This doesn't scale very well when importing `GWAS_tools` into still larger workflows as I like to do, but I'm optimistic I can find a better solution within `snakemake`.
+
 # Outstanding issues (17/10/24)
 
-I am able to run this locally, but the cluster I use seems not to allow `plink` to create log files. I hope this is just some idiosyncrasy of cluster configuration, but it may relate to `apptainer`'s interaction with the file system, something that can be configured via the `snakemake` CLI. I'm in the process of troubleshooting this.
-
-I also need to reintroduce the `conda` statement used to inject the `envs/global.yaml` dependencies into the `snakemake` process for the sake of `run` blocks.
+I am able to run this locally, but the cluster I use seems not to allow `plink` to create log files. I hope this is just some idiosyncrasy of cluster configuration, but it may relate to `apptainer`'s interaction with the file system, something that can be configured via the `snakemake` CLI. I'm in the process of troubleshooting this and apparently [I'm not the only one with this issue](https://github.com/snakemake/snakemake/issues/2959).
 
 If you happen upon this repo and have a problem, please open an issue.
