@@ -20,7 +20,6 @@ The `assembly` wildcard allows you to specify either the `hg19` or `hg38` refere
 
 Dependencies for the software are provided in a `docker` container [hosted on DockerHub](https://hub.docker.com/repository/docker/twillis209/1kgp-pipeline/general). `snakemake` should pull this automatically so there's no need to build the container yourself, although I have included the Dockerfile under the `docker` directory so you can see what it contains. The image is derived from the [`rocker/r-ver` image](https://rocker-project.org/images/versioned/r-ver).
 
-
 `pandas` is required for some `run` rules and this is provided in the `conda` environment defined in `envs/global.yaml`. Your profile should contain the following so that both `docker` and `conda` are used:
 ```
 software-deployment-method: "apptainer"
