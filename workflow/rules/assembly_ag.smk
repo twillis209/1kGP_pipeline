@@ -71,7 +71,7 @@ rule retain_snps_only:
     input:
         multiext("results/1kG/{assembly}/{ancestry}/{chr}", ".pgen", ".pvar.zst", ".psam"),
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/snps_only/{maf,\\d+}/{chr}", ".pgen", ".pvar.zst", ".psam"))
+        temp(multiext("results/1kG/{assembly}/{ancestry}/snps_only/{maf}/{chr}", ".pgen", ".pvar.zst", ".psam"))
     log:
         "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/{chr}.log"
     params:
