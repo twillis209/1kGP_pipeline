@@ -26,7 +26,7 @@ rule vcf_to_pgen:
     log:
         "results/1kG/{assembly}/{chr}.log"
     params:
-        out = "results/1kG/{assembly}/{chr}",
+        out = subpath(output[0], strip_suffix = '.pgen'),
         id_format = r"@:#:\$r:\$a",
         max_allele_len = 20
     threads: 8
@@ -59,8 +59,8 @@ rule get_ancestry_specific_samples:
      log:
         "results/1kG/{assembly}/{ancestry}/{chr}.log"
      params:
-        in_stem = "results/1kG/{assembly}/{chr}",
-        out_stem = "results/1kG/{assembly}/{ancestry}/{chr}"
+        in_stem = subpath(input[0], strip_suffix = '.pgen'),
+        out_stem = subpath(output[0], strip_suffix = '.pgen')
      threads: 8
      group: "1kG"
      shell:
@@ -75,8 +75,8 @@ rule retain_snps_only:
     log:
         "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/{chr}.log"
     params:
-        in_stem = "results/1kG/{assembly}/{ancestry}/{chr}",
-        out_stem = "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/{chr}",
+        in_stem = subpath(input[0], strip_suffix = '.pgen'),
+        out_stem = subpath(output[0], strip_suffix = '.pgen'),
         maf = lambda w: float(f"0.{w.maf}")
     threads: 8
     group: "1kG"
@@ -92,8 +92,8 @@ rule merge_pgen_files:
     log:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged.log"
     params:
-        in_dir = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}",
-        out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged",
+        in_dir = subpath(input[0], parent = True),
+        out_stem = subpath(output[0], strip_suffix = '.pgen'),
         max_allele_ct = 2
     threads: 16
     group: "1kG"
@@ -115,7 +115,7 @@ rule pgen_to_hap_and_legend:
     log:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/{chr}.log"
     params:
-        stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/{chr}"
+        stem = subpath(input[0], strip_suffix = '.pgen')
     threads: 16
     group: "1kG"
     shell:
@@ -127,7 +127,7 @@ rule concatenate_legend_files:
     output:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/combined.legend.gz"
     params:
-        uncompressed_output = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/combined.legend"
+        uncompressed_output = subpath(output[0], strip_suffix = '.gz')
     localrule: True
     shell:
         """
@@ -146,8 +146,8 @@ rule compute_maf:
     log:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged.log"
     params:
-        in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged",
-        out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged",
+        in_stem = subpath(input[0], strip_suffix = '.pgen'),
+        out_stem = subpath(output[0], strip_suffix = '.afreq')
     threads: 16
     resources:
         runtime = 10
@@ -163,7 +163,7 @@ rule write_out_merged_bed_format_files:
     log:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged.log"
     params:
-        in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged",
+        in_stem = subpath(input[0], strip_suffix = '.pgen')
     threads: 16
     group: "1kG"
     shell:
@@ -177,8 +177,8 @@ rule qc:
      log:
          "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged.log"
      params:
-        in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged",
-        out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged",
+        in_stem = subpath(input[0], strip_suffix = '.pgen'),
+        out_stem = subpath(output[0], strip_suffix = '.pgen'),
         geno = 0.01,
         mind = 0.01,
         hwe = 1e-50
@@ -209,17 +209,35 @@ rule identify_at_gc_snps:
     shell: """
     """
 
+rule remove_pars:
+    input:
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam")
+    output:
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged", ".pgen", ".pvar.zst", ".psam")
+    log:
+        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged.log"
+    params:
+        in_stem = subpath(input[0], strip_suffix = '.pgen'),
+        out_stem = subpath(output[0], strip_suffix = '.pgen'),
+        par_spec = "PAR1 PAR2"
+    threads: 16
+    resources:
+        runtime = 10
+    group: "1kG"
+    shell:
+        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --not-chr {params.par_spec} --make-pgen vzs --out {params.out_stem}"
+
 rule remove_at_gc_snps:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/snps_only/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam"),
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam"),
         at_gc_variants = "",
     output:
-        multiext("results/1kG/{assembly}/{ancestry}/sans_at_gc_snps_only/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam")
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_at_gc_snps/merged", ".pgen", ".pvar.zst", ".psam")
     log:
-        "results/1kG/{assembly}/{ancestry}/sans_at_gc_snps_only/{maf}/qc/merged.log"
+        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_at_gc_snps/merged.log"
     params:
-        in_stem = "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/qc/merged",
-        out_stem = "results/1kG/{assembly}/{ancestry}/sans_at_gc_snps_only/qc/merged"
+        in_stem = subpath(input[0], strip_suffix = '.pgen'),
+        out_stem = subpath(output[0], strip_suffix = '.pgen')
     threads: 16
     resources:
         runtime = 10
@@ -233,7 +251,7 @@ rule copy_to_all_variant_set:
     output:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged", ".pgen", ".pvar.zst", ".psam")
     params:
-        out = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all"
+        out = subpath(output[0], parent = True)
     threads: 1
     group: "1kG"
     shell:
@@ -249,8 +267,8 @@ rule convert_qced_data_to_bfile_format:
     log:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged.log"
     params:
-        in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged",
-        out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged"
+        in_stem = subpath(input[0], strip_suffix = '.pgen'),
+        out_stem = subpath(output[0], strip_suffix = '.bed')
     threads: 16
     group: "1kG"
     shell:
@@ -266,8 +284,8 @@ rule create_pruned_ranges:
     log:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.log"
     params:
-        in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged",
-        out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged",
+        in_stem = subpath(input[0], strip_suffix = '.pgen'),
+        out_stem = subpath(output[0], strip_suffix = '.prune.in'),
         r2 = lambda wildcards: wildcards.r2.replace('_', '.'),
     threads: 16
     resources:
@@ -285,8 +303,8 @@ rule prune_variants:
     log:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.log"
     params:
-        in_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged",
-        out_stem = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged"
+        in_stem = subpath(input[0], strip_suffix = '.pgen'),
+        out_stem = subpath(output[0], strip_suffix = '.pgen')
     threads: 16
     group: "1kG"
     shell:

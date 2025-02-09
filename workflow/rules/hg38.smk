@@ -95,12 +95,12 @@ rule write_out_per_chrom_hg38_recombination_map_files:
 
 rule write_out_bed_format_files_with_cm_field:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/snps_only/{maf}/qc/{variant_set}/merged", ".bed", ".bim", ".fam"),
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".bed", ".bim", ".fam"),
         map_files = [f"resources/1kG/hg38/genetic_map_hg38/chr{x}.txt" for x in list(range(1,23))+['X']]
     output:
-        multiext("results/1kG/{assembly}/{ancestry}/snps_only/{maf}/qc/{variant_set}/merged_with_cm", ".bed", ".bim", ".fam")
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm", ".bed", ".bim", ".fam")
     log:
-        log_file = "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/qc/{variant_set}/merged_with_cm.log"
+        log_file = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm.log"
     params:
         in_stem = subpath(input[0], strip_suffix = ".bed"),
         out_stem = subpath(output[0], strip_suffix = '.bed'),
@@ -110,5 +110,4 @@ rule write_out_bed_format_files_with_cm_field:
         runtime = 5
     group: "1kG"
     shell:
-        # NB: Exclusion of PARs is quite ad hoc, but don't want to exclude it earlier
-        "plink2 --memory {resources.mem_mb} --threads {threads} --bfile {params.in_stem} --not-chr PAR1 PAR2 --cm-map {params.map_pattern} --make-bed --out {params.out_stem} >{log.log_file}"
+        "plink --memory {resources.mem_mb} --threads {threads} --bfile {params.in_stem} --cm-map {params.map_pattern} --make-bed --out {params.out_stem} >{log.log_file}"
