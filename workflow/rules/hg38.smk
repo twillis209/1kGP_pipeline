@@ -100,7 +100,7 @@ rule write_out_bed_format_files_with_cm_field:
     output:
         multiext("results/1kG/{assembly}/{ancestry}/snps_only/{maf}/qc/{variant_set}/merged_with_cm", ".bed", ".bim", ".fam")
     log:
-        log_file = subpath(output[0], strip_suffix = '.bed') + '.log'
+        log_file = "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/qc/{variant_set}/merged_with_cm.log"
     params:
         in_stem = subpath(input[0], strip_suffix = ".bed"),
         out_stem = subpath(output[0], strip_suffix = '.bed'),
@@ -110,4 +110,4 @@ rule write_out_bed_format_files_with_cm_field:
         runtime = 5
     group: "1kG"
     shell:
-        "plink --memory {resources.mem_mb} --threads {threads} --bfile {params.in_stem} --cm-map {params.map_pattern} --make-bed --out {params.out_stem}"
+        "plink --memory {resources.mem_mb} --threads {threads} --bfile {params.in_stem} --cm-map {params.map_pattern} --make-bed --out {params.out_stem} >{log.log_file}"
