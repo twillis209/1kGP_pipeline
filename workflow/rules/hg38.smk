@@ -111,4 +111,4 @@ rule write_out_bed_format_files_with_cm_field:
     group: "1kG"
     shell:
         # NB: Exclusion of PARs is quite ad hoc, but don't want to exclude it earlier
-        "plink --memory {resources.mem_mb} --threads {threads} --bfile {params.in_stem} --not-chr PAR1 PAR2 --cm-map {params.map_pattern} --make-bed --out {params.out_stem} >{log.log_file}"
+        "plink2 --memory {resources.mem_mb} --threads {threads} --bfile {params.in_stem} --not-chr PAR1 PAR2 --cm-map {params.map_pattern} --make-bed --out {params.out_stem} >{log.log_file}"
