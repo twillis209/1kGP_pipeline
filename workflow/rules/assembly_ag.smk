@@ -309,3 +309,11 @@ rule prune_variants:
     group: "1kG"
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --exclude {input.range_file} --make-pgen vzs --out {params.out_stem}"
+
+use rule write_out_merged_bed_format_files as write_out_set_filtered_qc_merged_bed_format with:
+    input:
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam"),
+    output:
+        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".bed", ".bim", ".fam"))
+    log:
+        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged.log"
