@@ -66,12 +66,12 @@ rule get_ancestry_specific_samples:
      shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --keep {input.sample_file} --make-pgen vzs --out {params.out_stem}"
 
-        # NB: filters for MAF > 0.005
+# NB: filters for MAF > 0.005
 rule retain_snps_only:
     input:
         multiext("results/1kG/{assembly}/{ancestry}/{chr}", ".pgen", ".pvar.zst", ".psam"),
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/snps_only/{maf}/{chr}", ".pgen", ".pvar.zst", ".psam"))
+        temp(multiext("results/1kG/{assembly}/{ancestry}/snps_only/{maf,\\d+}/{chr}", ".pgen", ".pvar.zst", ".psam"))
     log:
         "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/{chr}.log"
     params:
