@@ -314,6 +314,6 @@ use rule write_out_merged_bed_format_files as write_out_set_filtered_qc_merged_b
     input:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam"),
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".bed", ".bim", ".fam"))
+        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set,!(all)}/merged", ".bed", ".bim", ".fam"))
     log:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged.log"
