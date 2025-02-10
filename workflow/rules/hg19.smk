@@ -55,3 +55,14 @@ rule download_1kG_hg19_sample_metadata:
         wget -O {output.panel} {params.panel_url}
         wget -O {output.ped} {params.ped_url}
         """
+
+rule download_hg19_recombination_map:
+    output:
+        ensure("resources/1kG/hg19/genetic_map_hg19_withX.txt.gz", sha256 = "7398f142f02815bdf563e125a0c34770f4024eb250ba57cb6ef81570c109fbbf")
+    params:
+        url = "https://storage.googleapis.com/broad-alkesgroup-public/Eagle/downloads/tables/genetic_map_hg19_withX.txt.gz"
+    localrule: True
+    shell:
+        """
+        wget -O {output} {params.url}
+        """

@@ -227,6 +227,24 @@ rule remove_pars:
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --not-chr {params.par_spec} --make-pgen vzs --out {params.out_stem}"
 
+rule remove_pars_with_bfile_output:
+    input:
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam")
+    output:
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged", ".bim", ".bed", ".fam")
+    log:
+        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged_bfiles.log"
+    params:
+        in_stem = subpath(input[0], strip_suffix = '.pgen'),
+        out_stem = subpath(output[0], strip_suffix = '.bim'),
+        par_spec = "PAR1 PAR2"
+    threads: 16
+    resources:
+        runtime = 10
+    group: "1kG"
+    shell:
+        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --not-chr {params.par_spec} --make-pgen vzs --out {params.out_stem}"
+
 rule remove_at_gc_snps:
     input:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam"),
@@ -314,6 +332,48 @@ use rule write_out_merged_bed_format_files as write_out_set_filtered_qc_merged_b
     input:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam"),
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set,!(all)}/merged", ".bed", ".bim", ".fam"))
+        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set,!all}/merged", ".bed", ".bim", ".fam"))
     log:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged.log"
+
+rule write_out_per_chrom_recombination_map_files:
+    input:
+        "resources/1kG/{assembly}/genetic_map_{assembly}_withX.txt.gz"
+    output:
+        temp([f"resources/1kG/{{assembly}}/genetic_map_{{assembly}}/chr{x}.txt" for x in list(range(1,23))+['X']])
+    params:
+        root_dir = subpath(input[0], strip_suffix = "_withX.txt.gz")
+    localrule: True
+    threads: 1
+    resources:
+        runtime = 20
+    shell:
+        """
+        for x in {{1..22}}; do
+            echo -e "position\trrate\tgposition" >"{params.root_dir}/chr"$x.txt
+        done
+
+        echo -e "position\trrate\tgposition" >"{params.root_dir}/chrX.txt"
+
+        zcat {input} | tail -n +2 | awk 'BEGIN {{OFS="\t"}} {{print $2, $3, $4 >> "{params.root_dir}/chr"$1".txt"}}'
+        """
+
+rule write_out_bed_format_files_with_cm_field:
+    input:
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".bed", ".bim", ".fam"),
+        map_files = [f"resources/1kG/{{assembly}}/genetic_map_{{assembly}}/chr{x}.txt" for x in list(range(1,23))+['X']]
+    output:
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm", ".bed", ".bim", ".fam")
+    log:
+        log_file = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm.log"
+    params:
+        in_stem = subpath(input[0], strip_suffix = ".bed"),
+        out_stem = subpath(output[0], strip_suffix = '.bed'),
+        map_pattern = "resources/1kG/{assembly}/genetic_map_{assembly}/chr@.txt"
+    threads: 16
+    resources:
+        runtime = 5
+    group: "1kG"
+    conda: env_path("global.yaml")
+    shell:
+        "plink --memory {resources.mem_mb} --threads {threads} --bfile {params.in_stem} --cm-map {params.map_pattern} --make-bed --out {params.out_stem} >{log.log_file}"

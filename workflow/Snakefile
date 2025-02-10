@@ -1,5 +1,5 @@
 from snakemake.utils import min_version
-min_version("8.20")
+min_version("8.26")
 
 conda: workflow.source_path("envs/global.yaml")
 
@@ -10,8 +10,12 @@ configfile: workflow.source_path("config/config.yaml")
 def get_vcf_sha256(wildcards):
     return config.get('sha256').get(wildcards.assembly).get(wildcards.chr)
 
+def env_path(env):
+    return os.path.join(workflow.basedir, "envs", env)
+
+include: "rules/wildcard_constraints.smk"
 include: "rules/hg19.smk"
 include: "rules/hg38.smk"
 # Assembly-agnostic rules
 include: "rules/assembly_ag.smk"
-include: "rules/wildcard_constraints.smk"
+include: "rules/ldsc.smk"
