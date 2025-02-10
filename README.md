@@ -10,7 +10,8 @@ This is a `snakemake` pipeline for downloading and processing the [1000 Genomes 
 * filter variants to remove AT/GC SNPs
 * prune variants by LD
 * remove the MHC
-* add the centimorgan field to `plink`-style bfiles (currently only for `hg38`) for the calculation of LD scores
+* add the centimorgan field to `plink`-style bfiles for the calculation of LD scores
+* compute LD scores
 
 Of course, there's much more you can do with these data and `plink`, but I intend this workflow to be a 'stub' of sorts which can be extended in the downstream direction with additional rules after import as a `module`. Hopefully these rules suffice to get you started.
 
@@ -55,8 +56,16 @@ The config handling is currently a bit hacky: rather than the module reading its
 
 At present I'm not able to resolve the issue I describe below relating to log files in my current HPC environment, so have had to roll back the containerisation in the dedicated `conda` branch.
 
-# Outstanding issues (17/10/24)
+## LD score calculation
+
+Including this functionality in the pipeline is arguably scope creep of the type I'd like to avoid, but LD scores are near-ubiquitous these days across analyses downstream of GWAS. Note that I've followed the guidance on the [LDSC GitHub](https://github.com/bulik/ldsc/wiki/LD-Score-Estimation-Tutorial) when calculating the scores, but a more careful approach would probably adjust the window parameter for the MHC and any other regions featuring long-range linkage disequilibrium patterns. I can't guarantee that is sufficient for dealing with the MHC, though: for immune-related phenotypes it contains variants with extremely large effects which may not be handled well by the heritability estimation methods like LDSC or SumHer (the authors of the latter suggest inclusion of fixed effects to account for this).
+
+`plink` does not like inclusion of the pseudoautosomal regions on the X chromosome (it won't work with chromosomes labelled 'PAR1' and 'PAR2'), so I drop these for calculation of LD scores (see the `sans_pars` value for the `variant_set` wildcard.
+
+# Outstanding issues (10/2/25)
 
 I am able to run this locally, but the cluster I use seems not to allow `plink` to create log files. I hope this is just some idiosyncrasy of cluster configuration, but it may relate to `apptainer`'s interaction with the file system, something that can be configured via the `snakemake` CLI. I'm in the process of troubleshooting this and apparently [I'm not the only one with this issue](https://github.com/snakemake/snakemake/issues/2959).
+
+The `docker` branch is lagging behind quite a bit; the `conda` branch is the current branch and the only one to include the LD score functionality.
 
 If you happen upon this repo and have a problem, please open an issue.
