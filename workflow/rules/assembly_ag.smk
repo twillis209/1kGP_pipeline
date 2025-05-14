@@ -47,8 +47,7 @@ rule make_1kG_unrelated_sample_files:
          sas = "results/1kG/{assembly}/sas.samples",
          all = "results/1kG/{assembly}/all.samples"
      localrule: True
-     script:
-        "../scripts/write_1kG_sample_files.R"
+     script: script_path("write_1kG_sample_files.R")
 
 rule get_ancestry_specific_samples:
      input:

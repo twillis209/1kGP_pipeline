@@ -10,6 +10,9 @@ configfile: workflow.source_path("config/config.yaml")
 def get_vcf_sha256(wildcards):
     return config.get('sha256').get(wildcards.assembly).get(wildcards.chr)
 
+def script_path(script):
+    return os.path.join(workflow.basedir, "scripts", script)
+
 def env_path(env):
     return os.path.join(workflow.basedir, "envs", env)
 
