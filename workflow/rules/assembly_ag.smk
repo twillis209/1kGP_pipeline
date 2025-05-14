@@ -51,7 +51,7 @@ rule make_1kG_unrelated_sample_files:
 
 rule get_ancestry_specific_samples:
      input:
-        multiext("results/1kG/{assembly}/{chr}", ".pgen", ".pvar.zst", ".psam"),
+        rules.vcf_to_pgen.output,
         sample_file = "results/1kG/{assembly}/{ancestry}.samples"
      output:
         temp(multiext("results/1kG/{assembly}/{ancestry}/{chr}", ".pgen", ".pvar.zst", ".psam"))
@@ -68,9 +68,9 @@ rule get_ancestry_specific_samples:
 # NB: filters for MAF > 0.005
 rule retain_snps_only:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{chr}", ".pgen", ".pvar.zst", ".psam"),
+        rules.get_ancestry_specific_samples.output
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/snps_only/{maf}/{chr}", ".pgen", ".pvar.zst", ".psam"))
+        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type,snps_only}/{maf}/{chr}", ".pgen", ".pvar.zst", ".psam"))
     log:
         "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/{chr}.log"
     params:
@@ -86,7 +86,7 @@ rule merge_pgen_files:
     input:
         expand("results/1kG/{{assembly}}/{{ancestry}}/{{variant_type}}/{{maf}}/{chr}.{ext}", chr = [f"chr{x}" for x in range(1,23)]+["chrX"], ext = ["pgen", "pvar.zst", "psam"])
     output:
-        protected(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged", ".pgen", ".pvar.zst", ".psam")),
+        pfiles = protected(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged", ".pgen", ".pvar.zst", ".psam")),
         pmerge_file = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/pmerge.txt"
     log:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged.log"
@@ -106,9 +106,10 @@ rule merge_pgen_files:
         plink2 --memory {resources.mem_mb} --threads {threads} --pmerge-list {output.pmerge_file} pfile-vzs --pmerge-list-dir {params.in_dir} --merge-max-allele-ct {params.max_allele_ct} --pmerge-output-vzs --out {params.out_stem}
     """
 
+# NB: supporting SNPs only atm
 rule pgen_to_hap_and_legend:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/{chr}", ".pgen", ".pvar.zst", ".psam")
+        rules.output
     output:
         temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/{chr}", ".haps", ".legend", ".sample"))
     log:
@@ -139,7 +140,7 @@ rule concatenate_legend_files:
 
 rule compute_maf:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged", ".pgen", ".pvar.zst", ".psam")
+        rules.merge_pgen_files.output.pfiles
     output:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged.afreq"
     log:
@@ -156,7 +157,7 @@ rule compute_maf:
 
 rule write_out_merged_bed_format_files:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged", ".pgen", ".pvar.zst", ".psam"),
+        rules.merge_pgen_files.output.pfiles
     output:
         temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged", ".bed", ".bim", ".fam"))
     log:
@@ -170,9 +171,9 @@ rule write_out_merged_bed_format_files:
 
 rule qc:
      input:
-         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged", ".pgen", ".pvar.zst", ".psam")
+         rules.merge_pgen_files.output.pfiles
      output:
-         temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam"))
+         temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type,snps_only}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam"))
      log:
          "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged.log"
      params:
@@ -190,7 +191,7 @@ rule qc:
 
 rule decompress_pvar_for_at_gc_snps:
     input:
-        "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/qc/merged.pvar.zst"
+        rules.qc.output[1]
     output:
         temp("results/1kG/{assembly}/{ancestry}/snps_only/{maf}/qc/merged.pvar")
     localrule: True
@@ -199,7 +200,7 @@ rule decompress_pvar_for_at_gc_snps:
 
 rule identify_at_gc_snps:
     input:
-        "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/qc/merged.pvar"
+        rules.decompress_pvar_for_at_gc_snps.output
     output:
         "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/qc/at_gc_snps.txt"
     threads: 12
@@ -210,7 +211,7 @@ rule identify_at_gc_snps:
 
 rule remove_pars:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam")
+        rules.qc.output
     output:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged", ".pgen", ".pvar.zst", ".psam")
     log:
@@ -228,7 +229,7 @@ rule remove_pars:
 
 rule remove_pars_with_bfile_output:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam")
+        rules.qc.output
     output:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged", ".bim", ".bed", ".fam")
     log:
@@ -246,10 +247,10 @@ rule remove_pars_with_bfile_output:
 
 rule remove_at_gc_snps:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam"),
+        rules.qc.output,
         at_gc_variants = "",
     output:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_at_gc_snps/merged", ".pgen", ".pvar.zst", ".psam")
+        multiext("results/1kG/{assembly}/{ancestry}/{variant_type,snps_only}/{maf}/qc/sans_at_gc_snps/merged", ".pgen", ".pvar.zst", ".psam")
     log:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_at_gc_snps/merged.log"
     params:
@@ -264,7 +265,7 @@ rule remove_at_gc_snps:
 
 rule copy_to_all_variant_set:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam")
+        rules.output.qc
     output:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged", ".pgen", ".pvar.zst", ".psam")
     params:
@@ -278,7 +279,7 @@ rule copy_to_all_variant_set:
 
 rule convert_qced_data_to_bfile_format:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged", ".pgen", ".pvar.zst", ".psam")
+        rules.copy_to_all_variant_set.output
     output:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged", ".bed", ".bim", ".fam")
     log:
