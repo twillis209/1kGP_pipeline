@@ -39,13 +39,10 @@ rule make_1kG_sample_files:
          ped = "resources/1kG/{assembly}/ped.txt",
          # No hg38 panel file required
          panel = "resources/1kG/hg19/panel.txt",
+     params:
+         out_dir = subpath(output[0], parent = True)
      output:
-         eur = "results/1kG/{assembly}/{relatedness}/eur.samples",
-         afr = "results/1kG/{assembly}/{relatedness}/afr.samples",
-         amr = "results/1kG/{assembly}/{relatedness}/amr.samples",
-         eas = "results/1kG/{assembly}/{relatedness}/eas.samples",
-         sas = "results/1kG/{assembly}/{relatedness}/sas.samples",
-         all = "results/1kG/{assembly}/{relatedness}/all.samples"
+         expand("results/1kG/{{assembly}}/{{relatedness}}/{ancestry}.samples", ancestry = ["eur", "afr", "amr", "eas", "sas", "all"])
      localrule: True
      script: script_path("write_1kG_sample_files.R")
 
@@ -229,7 +226,7 @@ rule remove_pars:
 
 rule remove_pars_with_bfile_output:
     input:
-        rules.qc.output
+        rules.remove_pars.output
     output:
         multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged", ".bim", ".bed", ".fam")
     log:
