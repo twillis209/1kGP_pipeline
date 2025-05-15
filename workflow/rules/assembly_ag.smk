@@ -1,3 +1,27 @@
+def get_variant_set_filter_flags(wildcards):
+    """
+    Returns a string of plink2 flags for variant set filtering
+    """
+    variant_set_options = wildcards.variant_set.split("_and_")
+
+    plink_flags = ""
+
+    if 'all' in variant_set_options and len(variant_set_options) == 1:
+        return plink_flags
+    elif 'all' in variant_set_options:
+        raise ValueError("Invalid variant set options, cannot specify 'all' with other options")
+
+    if 'sans_mhc' in variant_set_options:
+        raise NotImplementedError("MHC filtering not implemented yet")
+
+    if 'sans_at_gc' in variant_set_options:
+        plink_flags += f" --exclude {input.at_gc_snps}"
+
+    if 'sans_pars' in variant_set_options:
+        plink_flags += f" --not-chr PAR1 PAR2"
+
+    return plink_flags
+
 rule make_1kG_sex_file:
     input:
         "resources/1kG/{assembly}/ped.txt",
@@ -81,7 +105,7 @@ rule retain_snps_only:
 
 rule merge_pgen_files:
     input:
-        expand("results/1kG/{{assembly}}/{{ancestry}}/{{variant_type}}/{{maf}}/{chr}.{ext}", chr = [f"chr{x}" for x in range(1,23)]+["chrX"], ext = ["pgen", "pvar.zst", "psam"])
+        expand("results/1kG/{{assembly}}/{{relatedness}}/{{ancestry}}/{{variant_type}}/{{maf}}/{chr}.{ext}", chr = [f"chr{x}" for x in range(1,23)]+["chrX"], ext = ["pgen", "pvar.zst", "psam"])
     output:
         pfiles = protected(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/merged", ".pgen", ".pvar.zst", ".psam")),
         pmerge_file = "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/pmerge.txt"
@@ -190,7 +214,7 @@ rule decompress_pvar_for_at_gc_snps:
     input:
         rules.qc.output[1]
     output:
-        temp("results/1kG/{assembly}/{relatedness}/{ancestry}/snps_only/{maf}/qc/merged.pvar")
+        temp("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type,snps_only}/{maf}/qc/merged.pvar")
     localrule: True
     shell:
         "zstdcat {input} | grep -v '^#' >{output}"
@@ -199,84 +223,57 @@ rule identify_at_gc_snps:
     input:
         rules.decompress_pvar_for_at_gc_snps.output
     output:
-        "results/1kG/{assembly}/{relatedness}/{ancestry}/snps_only/{maf}/qc/at_gc_snps.txt"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/at_gc_snps.txt"
     threads: 12
     resources:
         runtime = 60
-    shell: """
-    """
+    shell:
+        """
+        """
 
-rule remove_pars:
+rule filter_variant_set:
     input:
-        rules.qc.output
+        pfiles = rules.qc.output,
+        at_gc_snps = rules.identify_at_gc_snps.output,
     output:
-        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged", ".pgen", ".pvar.zst", ".psam")
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam")
     log:
-        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged.log"
     params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.pgen'),
-        par_spec = "PAR1 PAR2"
+        filter_flags = lambda w: get_variant_set_filter_flags(w),
     threads: 16
     resources:
         runtime = 10
     group: "1kG"
-    shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --not-chr {params.par_spec} --make-pgen vzs --out {params.out_stem}"
+    run:
+        if wildcards.variant_set == 'all':
+            shell("cp {input.pfiles} {params.out_stem}")
+        else:
+            shell("plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --make-pgen vzs --out {params.out_stem} " + params.filter_flags)
 
-rule remove_pars_with_bfile_output:
-    input:
-        rules.remove_pars.output
-    output:
-        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged", ".bim", ".bed", ".fam")
-    log:
-        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged_bfiles.log"
-    params:
-        in_stem = subpath(input[0], strip_suffix = '.pgen'),
-        out_stem = subpath(output[0], strip_suffix = '.bim'),
-        par_spec = "PAR1 PAR2"
-    threads: 16
-    resources:
-        runtime = 10
-    group: "1kG"
-    shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --not-chr {params.par_spec} --make-pgen vzs --out {params.out_stem}"
-
-rule remove_at_gc_snps:
-    input:
-        rules.qc.output,
-        at_gc_variants = "",
-    output:
-        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type,snps_only}/{maf}/qc/sans_at_gc_snps/merged", ".pgen", ".pvar.zst", ".psam")
-    log:
-        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_at_gc_snps/merged.log"
-    params:
-        in_stem = subpath(input[0], strip_suffix = '.pgen'),
-        out_stem = subpath(output[0], strip_suffix = '.pgen')
-    threads: 16
-    resources:
-        runtime = 10
-    group: "1kG"
-    shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --exclude {input.at_gc_variants} --make-pgen vzs --out {params.out_stem}"
-
-rule copy_to_all_variant_set:
-    input:
-        rules.qc.output
-    output:
-        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/all/merged", ".pgen", ".pvar.zst", ".psam")
-    params:
-        out = subpath(output[0], parent = True)
-    threads: 1
-    group: "1kG"
-    shell:
-        """
-        cp {input} {params.out}
-        """
+# rule remove_pars_with_bfile_output:
+#     input:
+#         rules.remove_pars.output
+#     output:
+#         multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged", ".bim", ".bed", ".fam")
+#     log:
+#         "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged_bfiles.log"
+#     params:
+#         in_stem = subpath(input[0], strip_suffix = '.pgen'),
+#         out_stem = subpath(output[0], strip_suffix = '.bim'),
+#         par_spec = "PAR1 PAR2"
+#     threads: 16
+#     resources:
+#         runtime = 10
+#     group: "1kG"
+#     shell:
+#         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --not-chr {params.par_spec} --make-pgen vzs --out {params.out_stem}"
 
 rule convert_qced_data_to_bfile_format:
     input:
-        rules.copy_to_all_variant_set.output
+        rules.filter_variant_set.output
     output:
         multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/all/merged", ".bed", ".bim", ".fam")
     log:
