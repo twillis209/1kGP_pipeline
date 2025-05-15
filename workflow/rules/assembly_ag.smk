@@ -34,29 +34,29 @@ rule vcf_to_pgen:
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --vcf {input.vcf} --make-pgen vzs --fa {input.ref} --ref-from-fa 'force' --out {params.out} --set-all-var-ids {params.id_format} --max-alleles 2 --new-id-max-allele-len {params.max_allele_len} truncate --update-sex {input.sex} --split-par '{wildcards.assembly}'"
 
-rule make_1kG_unrelated_sample_files:
+rule make_1kG_sample_files:
      input:
          ped = "resources/1kG/{assembly}/ped.txt",
          # No hg38 panel file required
          panel = "resources/1kG/hg19/panel.txt",
      output:
-         eur = "results/1kG/{assembly}/eur.samples",
-         afr = "results/1kG/{assembly}/afr.samples",
-         amr = "results/1kG/{assembly}/amr.samples",
-         eas = "results/1kG/{assembly}/eas.samples",
-         sas = "results/1kG/{assembly}/sas.samples",
-         all = "results/1kG/{assembly}/all.samples"
+         eur = "results/1kG/{assembly}/{relatedness}/eur.samples",
+         afr = "results/1kG/{assembly}/{relatedness}/afr.samples",
+         amr = "results/1kG/{assembly}/{relatedness}/amr.samples",
+         eas = "results/1kG/{assembly}/{relatedness}/eas.samples",
+         sas = "results/1kG/{assembly}/{relatedness}/sas.samples",
+         all = "results/1kG/{assembly}/{relatedness}/all.samples"
      localrule: True
      script: script_path("write_1kG_sample_files.R")
 
 rule get_ancestry_specific_samples:
      input:
         rules.vcf_to_pgen.output,
-        sample_file = "results/1kG/{assembly}/{ancestry}.samples"
+        sample_file = "results/1kG/{assembly}/{relatedness}/{ancestry}.samples"
      output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/{chr}", ".pgen", ".pvar.zst", ".psam"))
+        temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{chr}", ".pgen", ".pvar.zst", ".psam"))
      log:
-        "results/1kG/{assembly}/{ancestry}/{chr}.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{chr}.log"
      params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.pgen')
@@ -70,9 +70,9 @@ rule retain_snps_only:
     input:
         rules.get_ancestry_specific_samples.output
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type,snps_only}/{maf}/{chr}", ".pgen", ".pvar.zst", ".psam"))
+        temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type,snps_only}/{maf}/{chr}", ".pgen", ".pvar.zst", ".psam"))
     log:
-        "results/1kG/{assembly}/{ancestry}/{variant_type,snps_only}/{maf}/{chr}.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type,snps_only}/{maf}/{chr}.log"
     params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.pgen'),
@@ -86,10 +86,10 @@ rule merge_pgen_files:
     input:
         expand("results/1kG/{{assembly}}/{{ancestry}}/{{variant_type}}/{{maf}}/{chr}.{ext}", chr = [f"chr{x}" for x in range(1,23)]+["chrX"], ext = ["pgen", "pvar.zst", "psam"])
     output:
-        pfiles = protected(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged", ".pgen", ".pvar.zst", ".psam")),
-        pmerge_file = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/pmerge.txt"
+        pfiles = protected(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/merged", ".pgen", ".pvar.zst", ".psam")),
+        pmerge_file = "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/pmerge.txt"
     log:
-        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/merged.log"
     params:
         in_dir = subpath(input[0], parent = True),
         out_stem = subpath(output[0], strip_suffix = '.pgen'),
@@ -111,9 +111,9 @@ rule pgen_to_hap_and_legend:
     input:
         rules.vcf_to_pgen.output
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type,snps_only}/{maf}/{chr}", ".haps", ".legend", ".sample"))
+        temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type,snps_only}/{maf}/{chr}", ".haps", ".legend", ".sample"))
     log:
-        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/{chr}.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/{chr}.log"
     params:
         stem = subpath(input[0], strip_suffix = '.pgen')
     threads: 16
@@ -125,7 +125,7 @@ rule concatenate_legend_files:
     input:
         expand("results/1kG/{{assembly}}/{{ancestry}}/{{variant_type}}/{{maf}}/{chr}.legend", chr = [f"chr{x}" for x in range(1,23)])
     output:
-        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/combined.legend.gz"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/combined.legend.gz"
     params:
         uncompressed_output = subpath(output[0], strip_suffix = '.gz')
     localrule: True
@@ -142,9 +142,9 @@ rule compute_maf:
     input:
         rules.merge_pgen_files.output.pfiles
     output:
-        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged.afreq"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/merged.afreq"
     log:
-        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/merged.log"
     params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.afreq')
@@ -159,9 +159,9 @@ rule write_out_merged_bed_format_files:
     input:
         rules.merge_pgen_files.output.pfiles
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged", ".bed", ".bim", ".fam"))
+        temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/merged", ".bed", ".bim", ".fam"))
     log:
-        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/merged.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/merged.log"
     params:
         in_stem = subpath(input[0], strip_suffix = '.pgen')
     threads: 16
@@ -173,9 +173,9 @@ rule qc:
      input:
          rules.merge_pgen_files.output.pfiles
      output:
-         temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type,snps_only}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam"))
+         temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type,snps_only}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam"))
      log:
-         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/merged.log"
+         "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/merged.log"
      params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.pgen'),
@@ -193,7 +193,7 @@ rule decompress_pvar_for_at_gc_snps:
     input:
         rules.qc.output[1]
     output:
-        temp("results/1kG/{assembly}/{ancestry}/snps_only/{maf}/qc/merged.pvar")
+        temp("results/1kG/{assembly}/{relatedness}/{ancestry}/snps_only/{maf}/qc/merged.pvar")
     localrule: True
     shell:
         "zstdcat {input} | grep -v '^#' >{output}"
@@ -202,7 +202,7 @@ rule identify_at_gc_snps:
     input:
         rules.decompress_pvar_for_at_gc_snps.output
     output:
-        "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/qc/at_gc_snps.txt"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/snps_only/{maf}/qc/at_gc_snps.txt"
     threads: 12
     resources:
         runtime = 60
@@ -213,9 +213,9 @@ rule remove_pars:
     input:
         rules.qc.output
     output:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged", ".pgen", ".pvar.zst", ".psam")
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged", ".pgen", ".pvar.zst", ".psam")
     log:
-        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged.log"
     params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.pgen'),
@@ -231,9 +231,9 @@ rule remove_pars_with_bfile_output:
     input:
         rules.qc.output
     output:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged", ".bim", ".bed", ".fam")
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged", ".bim", ".bed", ".fam")
     log:
-        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged_bfiles.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged_bfiles.log"
     params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.bim'),
@@ -250,9 +250,9 @@ rule remove_at_gc_snps:
         rules.qc.output,
         at_gc_variants = "",
     output:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type,snps_only}/{maf}/qc/sans_at_gc_snps/merged", ".pgen", ".pvar.zst", ".psam")
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type,snps_only}/{maf}/qc/sans_at_gc_snps/merged", ".pgen", ".pvar.zst", ".psam")
     log:
-        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/sans_at_gc_snps/merged.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_at_gc_snps/merged.log"
     params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.pgen')
@@ -267,7 +267,7 @@ rule copy_to_all_variant_set:
     input:
         rules.qc.output
     output:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged", ".pgen", ".pvar.zst", ".psam")
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/all/merged", ".pgen", ".pvar.zst", ".psam")
     params:
         out = subpath(output[0], parent = True)
     threads: 1
@@ -281,9 +281,9 @@ rule convert_qced_data_to_bfile_format:
     input:
         rules.copy_to_all_variant_set.output
     output:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged", ".bed", ".bim", ".fam")
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/all/merged", ".bed", ".bim", ".fam")
     log:
-        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/all/merged.log"
     params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.bed')
@@ -296,11 +296,11 @@ rule convert_qced_data_to_bfile_format:
 
 rule create_pruned_ranges:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam")
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam")
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged", ".prune.in", ".prune.out"))
+        temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged", ".prune.in", ".prune.out"))
     log:
-        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.log"
     params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.prune.in'),
@@ -314,12 +314,12 @@ rule create_pruned_ranges:
 
 rule prune_variants:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam"),
-        range_file = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.prune.out"
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam"),
+        range_file = "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.prune.out"
     output:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged", ".pgen", ".psam", ".pvar.zst")
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged", ".pgen", ".psam", ".pvar.zst")
     log:
-        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.log"
     params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.pgen')
@@ -330,11 +330,11 @@ rule prune_variants:
 
 use rule write_out_merged_bed_format_files as write_out_set_filtered_qc_merged_bed_format with:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam"),
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam"),
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set,!all}/merged", ".bed", ".bim", ".fam"))
+        temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set,!all}/merged", ".bed", ".bim", ".fam"))
     log:
-        "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged.log"
 
 rule write_out_per_chrom_recombination_map_files:
     input:
@@ -360,12 +360,12 @@ rule write_out_per_chrom_recombination_map_files:
 
 rule write_out_bed_format_files_with_cm_field:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".bed", ".bim", ".fam"),
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".bed", ".bim", ".fam"),
         map_files = [f"resources/1kG/{{assembly}}/genetic_map_{{assembly}}/chr{x}.txt" for x in list(range(1,23))+['X']]
     output:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm", ".bed", ".bim", ".fam")
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm", ".bed", ".bim", ".fam")
     log:
-        log_file = "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm.log"
+        log_file = "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm.log"
     params:
         in_stem = subpath(input[0], strip_suffix = ".bed"),
         out_stem = subpath(output[0], strip_suffix = '.bed'),

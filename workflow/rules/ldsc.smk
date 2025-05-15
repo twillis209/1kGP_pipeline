@@ -1,8 +1,8 @@
 rule write_per_chrom_bfiles_for_ld_score_estimation:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm", ".bed", ".bim", ".fam")
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm", ".bed", ".bim", ".fam")
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm/chr{chr_no}", ".bed", ".bim", ".fam"))
+        temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm/chr{chr_no}", ".bed", ".bim", ".fam"))
     params:
         in_stem = subpath(input[0], strip_suffix = '.bed'),
         out_stem = subpath(output[0], strip_suffix = '.bed')
@@ -12,11 +12,11 @@ rule write_per_chrom_bfiles_for_ld_score_estimation:
 
 rule compute_ld_scores:
     input:
-        multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm/chr{chr_no}", ".bed", ".bim", ".fam")
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm/chr{chr_no}", ".bed", ".bim", ".fam")
     output:
-        multiext("results/ldsc/ld_scores/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/chr{chr_no}", ".l2.M", ".l2.ldscore.gz", ".l2.M_5_50")
+        multiext("results/ldsc/ld_scores/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/chr{chr_no}", ".l2.M", ".l2.ldscore.gz", ".l2.M_5_50")
     log:
-        "results/ldsc/ld_scores/{assembly}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/chr{chr_no}.log"
+        "results/ldsc/ld_scores/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/chr{chr_no}.log"
     params:
         in_stem = subpath(input[0], strip_suffix = '.bed'),
         out_stem = subpath(output[0], strip_suffix = '.l2.M')
