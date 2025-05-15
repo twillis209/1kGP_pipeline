@@ -72,7 +72,7 @@ rule retain_snps_only:
     output:
         temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type,snps_only}/{maf}/{chr}", ".pgen", ".pvar.zst", ".psam"))
     log:
-        "results/1kG/{assembly}/{ancestry}/snps_only/{maf}/{chr}.log"
+        "results/1kG/{assembly}/{ancestry}/{variant_type,snps_only}/{maf}/{chr}.log"
     params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.pgen'),
@@ -109,9 +109,9 @@ rule merge_pgen_files:
 # NB: supporting SNPs only atm
 rule pgen_to_hap_and_legend:
     input:
-        rules.output
+        rules.vcf_to_pgen.output
     output:
-        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/{chr}", ".haps", ".legend", ".sample"))
+        temp(multiext("results/1kG/{assembly}/{ancestry}/{variant_type,snps_only}/{maf}/{chr}", ".haps", ".legend", ".sample"))
     log:
         "results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/{chr}.log"
     params:
@@ -265,7 +265,7 @@ rule remove_at_gc_snps:
 
 rule copy_to_all_variant_set:
     input:
-        rules.output.qc
+        rules.qc.output
     output:
         multiext("results/1kG/{assembly}/{ancestry}/{variant_type}/{maf}/qc/all/merged", ".pgen", ".pvar.zst", ".psam")
     params:
