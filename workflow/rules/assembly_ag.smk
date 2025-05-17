@@ -1,4 +1,6 @@
-def get_variant_set_filter_flags(wildcards):
+import polars as pl
+
+def get_variant_set_filter_flags(wildcards, input):
     """
     Returns a string of plink2 flags for variant set filtering
     """
@@ -11,11 +13,8 @@ def get_variant_set_filter_flags(wildcards):
     elif 'all' in variant_set_options:
         raise ValueError("Invalid variant set options, cannot specify 'all' with other options")
 
-    if 'sans_mhc' in variant_set_options:
-        raise NotImplementedError("MHC filtering not implemented yet")
-
-    if 'sans_at_gc' in variant_set_options:
-        plink_flags += f" --exclude {input.at_gc_snps}"
+    if 'sans_mhc' or 'sans_at_gc' in variant_set_options:
+        plink_flags += f" --exclude {input.snps_to_exclude}"
 
     if 'sans_pars' in variant_set_options:
         plink_flags += f" --not-chr PAR1 PAR2"
@@ -68,6 +67,7 @@ rule make_1kG_sample_files:
      output:
          expand("results/1kG/{{assembly}}/{{relatedness}}/{ancestry}.samples", ancestry = ["eur", "afr", "amr", "eas", "sas", "all"])
      localrule: True
+     conda: env_path("r.yaml")
      script: script_path("write_1kG_sample_files.R")
 
 rule get_ancestry_specific_samples:
@@ -194,7 +194,7 @@ rule qc:
      input:
          rules.merge_pgen_files.output.pfiles
      output:
-         temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type,snps_only}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam"))
+         multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type,snps_only}/{maf}/qc/merged", ".pgen", ".pvar.zst", ".psam")
      log:
          "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/merged.log"
      params:
@@ -210,31 +210,67 @@ rule qc:
      shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --geno {params.geno} --mind {params.mind} --hwe {params.hwe} --make-pgen vzs --out {params.out_stem}"
 
-rule decompress_pvar_for_at_gc_snps:
+rule decompress_pvar_for_variant_screens:
     input:
         rules.qc.output[1]
     output:
-        temp("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type,snps_only}/{maf}/qc/merged.pvar")
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type,snps_only}/{maf}/qc/merged.pvar"
     localrule: True
     shell:
         "zstdcat {input} | grep -v '^#' >{output}"
 
 rule identify_at_gc_snps:
     input:
-        rules.decompress_pvar_for_at_gc_snps.output
+        rules.decompress_pvar_for_variant_screens.output
     output:
         "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/at_gc_snps.txt"
-    threads: 12
-    resources:
-        runtime = 60
-    shell:
-        """
-        """
+    threads: 4
+    run:
+        daf = pl.read_csv(input[0], separator = '\t', columns = [2, 3, 4], has_header = False, new_columns = ['ID', 'REF', 'ALT'])
+
+        ambiguous = daf.filter(
+            ((pl.col("REF") == "A") & (pl.col("ALT") == "T")) |
+            ((pl.col("REF") == "T") & (pl.col("ALT") == "A")) |
+            ((pl.col("REF") == "C") & (pl.col("ALT") == "G")) |
+            ((pl.col("REF") == "G") & (pl.col("ALT") == "C"))
+        )
+
+        ambiguous.select(pl.col("ID")).write_csv(output[0], separator = '\t')
+
+rule identify_mhc_snps:
+    input:
+        rules.decompress_pvar_for_variant_screens.output
+    output:
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/mhc_snps.txt"
+    threads: 4
+    run:
+        daf = pl.read_csv(input[0], separator = '\t', columns = [0, 1, 2], new_columns = ['chr', 'pos', 'ID'], schema_overrides = {"1": pl.String()})
+
+        mhc = daf.filter(
+            ((pl.col("pos").is_between(24e6, 45e6)) & (pl.col("chr") == "6"))
+        )
+
+        mhc.select(pl.col("ID")).write_csv(output[0], separator = '\t')
+
+rule identify_snps_to_exclude:
+    input:
+        at_gc_snps = rules.identify_at_gc_snps.output,
+        mhc_snps = rules.identify_mhc_snps.output
+    output:
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/snps_to_exclude.txt"
+    localrule: True
+    run:
+        shell("touch {output}")
+
+        if 'sans_mhc' in wildcards.variant_set:
+            shell("tail -n +2 {input.mhc_snps} >> {output}")
+        if 'sans_at_gc' in wildcards.variant_set:
+            shell("tail -n +2 {input.at_gc_snps} >> {output}")
 
 rule filter_variant_set:
     input:
         pfiles = rules.qc.output,
-        at_gc_snps = rules.identify_at_gc_snps.output,
+        snps_to_exclude = rules.identify_snps_to_exclude.output
     output:
         multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam")
     log:
@@ -242,42 +278,21 @@ rule filter_variant_set:
     params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.pgen'),
-        filter_flags = lambda w: get_variant_set_filter_flags(w),
+        filter_flags = lambda w, input: get_variant_set_filter_flags(w, input)
     threads: 16
     resources:
         runtime = 10
     group: "1kG"
     run:
-        if wildcards.variant_set == 'all':
-            shell("cp {input.pfiles} {params.out_stem}")
-        else:
-            shell("plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --make-pgen vzs --out {params.out_stem} " + params.filter_flags)
+        shell("plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --make-pgen vzs --out {params.out_stem} {params.filter_flags}")
 
-# rule remove_pars_with_bfile_output:
-#     input:
-#         rules.remove_pars.output
-#     output:
-#         multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged", ".bim", ".bed", ".fam")
-#     log:
-#         "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/sans_pars/merged_bfiles.log"
-#     params:
-#         in_stem = subpath(input[0], strip_suffix = '.pgen'),
-#         out_stem = subpath(output[0], strip_suffix = '.bim'),
-#         par_spec = "PAR1 PAR2"
-#     threads: 16
-#     resources:
-#         runtime = 10
-#     group: "1kG"
-#     shell:
-#         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --not-chr {params.par_spec} --make-pgen vzs --out {params.out_stem}"
-
-rule convert_qced_data_to_bfile_format:
+rule write_out_qced_data_to_bed_format:
     input:
         rules.filter_variant_set.output
     output:
-        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/all/merged", ".bed", ".bim", ".fam")
+        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".bed", ".bim", ".fam")
     log:
-        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/all/merged.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged.log"
     params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.bed')
@@ -290,7 +305,7 @@ rule convert_qced_data_to_bfile_format:
 
 rule create_pruned_ranges:
     input:
-        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam")
+        rules.filter_variant_set.output,
     output:
         temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged", ".prune.in", ".prune.out"))
     log:
@@ -308,8 +323,8 @@ rule create_pruned_ranges:
 
 rule prune_variants:
     input:
-        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam"),
-        range_file = "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.prune.out"
+        rules.filter_variant_set.output,
+        range_file = rules.create_pruned_ranges.output[1]
     output:
         multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged", ".pgen", ".psam", ".pvar.zst")
     log:
@@ -321,14 +336,6 @@ rule prune_variants:
     group: "1kG"
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --exclude {input.range_file} --make-pgen vzs --out {params.out_stem}"
-
-use rule write_out_merged_bed_format_files as write_out_set_filtered_qc_merged_bed_format with:
-    input:
-        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam"),
-    output:
-        temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set,!all}/merged", ".bed", ".bim", ".fam"))
-    log:
-        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged.log"
 
 rule write_out_per_chrom_recombination_map_files:
     input:
@@ -354,7 +361,7 @@ rule write_out_per_chrom_recombination_map_files:
 
 rule write_out_bed_format_files_with_cm_field:
     input:
-        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".bed", ".bim", ".fam"),
+        rules.write_out_qced_data_to_bed_format.output,
         map_files = [f"resources/1kG/{{assembly}}/genetic_map_{{assembly}}/chr{x}.txt" for x in list(range(1,23))+['X']]
     output:
         multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm", ".bed", ".bim", ".fam")

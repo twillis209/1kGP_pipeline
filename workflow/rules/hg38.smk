@@ -47,7 +47,7 @@ rule download_1kG_hg38_genotype_data:
     group: "1kG"
     run:
         if wildcards.chr == 'chrX':
-            shell("wget -O resources/1kG/hg38/chrX.vcf.gz {params.url}")
+            shell("wget -O resources/1kG/hg38/chrX.vcf.gz {params.chrX_url}")
         else:
             shell("wget -O resources/1kG/hg38/{wildcards.chr}.vcf.gz {params.autosome_url}")
 
