@@ -176,20 +176,6 @@ rule compute_maf:
     shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --freq --out {params.out_stem}"
 
-rule write_out_merged_bed_format_files:
-    input:
-        rules.merge_pgen_files.output.pfiles
-    output:
-        temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/merged", ".bed", ".bim", ".fam"))
-    log:
-        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/merged.log"
-    params:
-        in_stem = subpath(input[0], strip_suffix = '.pgen')
-    threads: 16
-    group: "1kG"
-    shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --make-bed --out {params.in_stem}"
-
 rule qc:
      input:
          rules.merge_pgen_files.output.pfiles

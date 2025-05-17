@@ -1,6 +1,6 @@
 rule write_per_chrom_bfiles_for_ld_score_estimation:
     input:
-        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm", ".bed", ".bim", ".fam")
+        rules.write_out_bed_format_files_with_cm_field.output
     output:
         temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm/chr{chr_no}", ".bed", ".bim", ".fam"))
     params:
@@ -12,7 +12,7 @@ rule write_per_chrom_bfiles_for_ld_score_estimation:
 
 rule compute_ld_scores:
     input:
-        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm/chr{chr_no}", ".bed", ".bim", ".fam")
+        rules.write_per_chrom_bfiles_for_ld_score_estimation.output
     output:
         multiext("results/ldsc/ld_scores/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/chr{chr_no}", ".l2.M", ".l2.ldscore.gz", ".l2.M_5_50")
     log:
