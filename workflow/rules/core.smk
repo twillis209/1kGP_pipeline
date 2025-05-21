@@ -159,23 +159,6 @@ rule concatenate_legend_files:
         gzip {params.uncompressed_output}
         """
 
-rule compute_maf:
-    input:
-        rules.merge_pgen_files.output.pfiles
-    output:
-        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/merged.afreq"
-    log:
-        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/merged.log"
-    params:
-        in_stem = subpath(input[0], strip_suffix = '.pgen'),
-        out_stem = subpath(output[0], strip_suffix = '.afreq')
-    threads: 16
-    resources:
-        runtime = 10
-    group: "1kG"
-    shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --freq --out {params.out_stem}"
-
 rule qc:
      input:
          rules.merge_pgen_files.output.pfiles
@@ -238,6 +221,7 @@ rule identify_mhc_snps:
 
         mhc.select(pl.col("ID")).write_csv(output[0], separator = '\t')
 
+# TODO probably want a list of 'long-range LD regions', ancestry-specific needed maybe?
 rule identify_snps_to_exclude:
     input:
         at_gc_snps = rules.identify_at_gc_snps.output,
@@ -288,79 +272,3 @@ rule write_out_qced_data_to_bed_format:
         """
         plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --make-bfile --silent --out {params.out_stem}
         """
-
-rule create_pruned_ranges:
-    input:
-        rules.filter_variant_set.output,
-    output:
-        temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged", ".prune.in", ".prune.out"))
-    log:
-        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.log"
-    params:
-        in_stem = subpath(input[0], strip_suffix = '.pgen'),
-        out_stem = subpath(output[0], strip_suffix = '.prune.in'),
-        r2 = lambda wildcards: wildcards.r2.replace('_', '.'),
-    threads: 16
-    resources:
-        runtime = 20
-    group: "1kG"
-    shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --indep-pairwise {wildcards.window_size} 1 {params.r2} --out {params.out_stem}"
-
-rule prune_variants:
-    input:
-        rules.filter_variant_set.output,
-        range_file = rules.create_pruned_ranges.output[1]
-    output:
-        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged", ".pgen", ".psam", ".pvar.zst")
-    log:
-        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/pruned/{window_size}_1_{r2}/merged.log"
-    params:
-        in_stem = subpath(input[0], strip_suffix = '.pgen'),
-        out_stem = subpath(output[0], strip_suffix = '.pgen')
-    threads: 16
-    group: "1kG"
-    shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --exclude {input.range_file} --make-pgen vzs --out {params.out_stem}"
-
-rule write_out_per_chrom_recombination_map_files:
-    input:
-        "resources/1kG/{assembly}/genetic_map_{assembly}_withX.txt.gz"
-    output:
-        temp([f"resources/1kG/{{assembly}}/genetic_map_{{assembly}}/chr{x}.txt" for x in list(range(1,23))+['X']])
-    params:
-        root_dir = subpath(input[0], strip_suffix = "_withX.txt.gz")
-    localrule: True
-    threads: 1
-    resources:
-        runtime = 20
-    shell:
-        """
-        for x in {{1..22}}; do
-            echo -e "position\trrate\tgposition" >"{params.root_dir}/chr"$x.txt
-        done
-
-        echo -e "position\trrate\tgposition" >"{params.root_dir}/chrX.txt"
-
-        zcat {input} | tail -n +2 | awk 'BEGIN {{OFS="\t"}} {{print $2, $3, $4 >> "{params.root_dir}/chr"$1".txt"}}'
-        """
-
-rule write_out_bed_format_files_with_cm_field:
-    input:
-        rules.write_out_qced_data_to_bed_format.output,
-        map_files = [f"resources/1kG/{{assembly}}/genetic_map_{{assembly}}/chr{x}.txt" for x in list(range(1,23))+['X']]
-    output:
-        multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm", ".bed", ".bim", ".fam")
-    log:
-        log_file = "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged_with_cm.log"
-    params:
-        in_stem = subpath(input[0], strip_suffix = ".bed"),
-        out_stem = subpath(output[0], strip_suffix = '.bed'),
-        map_pattern = "resources/1kG/{assembly}/genetic_map_{assembly}/chr@.txt"
-    threads: 16
-    resources:
-        runtime = 5
-    group: "1kG"
-    conda: env_path("global.yaml")
-    shell:
-        "plink --memory {resources.mem_mb} --threads {threads} --bfile {params.in_stem} --cm-map {params.map_pattern} --make-bed --out {params.out_stem} >{log.log_file}"
