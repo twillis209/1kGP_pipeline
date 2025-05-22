@@ -13,8 +13,11 @@ def get_variant_set_filter_flags(wildcards, input):
     elif 'all' in variant_set_options:
         raise ValueError("Invalid variant set options, cannot specify 'all' with other options")
 
-    if 'sans_long_range_ld' or 'sans_at_gc' in variant_set_options:
-        plink_flags += f" --exclude {input.snps_to_exclude}"
+    # if 'sans_long_range_ld' or 'sans_at_gc' in variant_set_options:
+    #     plink_flags += f" --exclude {input.snps_to_exclude}"
+
+    if 'sans_long_range_ld' in variant_set_options:
+        plink_flags += f" --exclude {input.long_range_ld}"
 
     if 'sans_pars' in variant_set_options:
         plink_flags += f" --not-chr PAR1 PAR2"
@@ -206,41 +209,26 @@ rule identify_at_gc_snps:
 
         ambiguous.select(pl.col("ID")).write_csv(output[0], separator = '\t')
 
-rule identify_mhc_snps:
-    input:
-        rules.decompress_pvar_for_variant_screens.output
-    output:
-        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/mhc_snps.txt"
-    threads: 4
-    run:
-        daf = pl.read_csv(input[0], separator = '\t', columns = [0, 1, 2], new_columns = ['chr', 'pos', 'ID'], schema_overrides = {"1": pl.String()})
+# TODO not sure how to easily combine bed regions with individual SNPs
+# rule identify_snps_to_exclude:
+#     input:
+#         at_gc_snps = rules.identify_at_gc_snps.output,
+#         long_range_ld = "resources/1kG/{assembly}/long_range_ld_regions.bed"
+#     output:
+#         "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/snps_to_exclude.txt"
+#     localrule: True
+#     run:
+#         shell("touch {output}")
 
-        mhc = daf.filter(
-            ((pl.col("pos").is_between(24e6, 45e6)) & (pl.col("chr") == "6"))
-        )
-
-        mhc.select(pl.col("ID")).write_csv(output[0], separator = '\t')
-
-# TODO probably want a list of 'long-range LD regions', ancestry-specific needed maybe?
-rule identify_snps_to_exclude:
-    input:
-        at_gc_snps = rules.identify_at_gc_snps.output,
-        mhc_snps = rules.identify_mhc_snps.output
-    output:
-        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/snps_to_exclude.txt"
-    localrule: True
-    run:
-        shell("touch {output}")
-
-        if 'sans_mhc' in wildcards.variant_set:
-            shell("tail -n +2 {input.mhc_snps} >> {output}")
-        if 'sans_at_gc' in wildcards.variant_set:
-            shell("tail -n +2 {input.at_gc_snps} >> {output}")
+#         if 'sans_mhc' in wildcards.variant_set:
+#             shell("tail -n +2 {input.mhc_snps} >> {output}")
+#         if 'sans_at_gc' in wildcards.variant_set:
+#             shell("tail -n +2 {input.at_gc_snps} >> {output}")
 
 rule filter_variant_set:
     input:
         pfiles = rules.qc.output,
-        snps_to_exclude = rules.identify_snps_to_exclude.output
+        long_range_ld = "resources/1kG/{assembly}/long_range_ld_regions.bed"
     output:
         multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam")
     log:
