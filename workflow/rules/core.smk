@@ -13,7 +13,7 @@ def get_variant_set_filter_flags(wildcards, input):
     elif 'all' in variant_set_options:
         raise ValueError("Invalid variant set options, cannot specify 'all' with other options")
 
-    if 'sans_mhc' or 'sans_at_gc' in variant_set_options:
+    if 'sans_long_range_ld' or 'sans_at_gc' in variant_set_options:
         plink_flags += f" --exclude {input.snps_to_exclude}"
 
     if 'sans_pars' in variant_set_options:
@@ -125,7 +125,7 @@ rule merge_pgen_files:
         echo "chrX" >>{output.pmerge_file}
 
         plink2 --memory {resources.mem_mb} --threads {threads} --pmerge-list {output.pmerge_file} pfile-vzs --pmerge-list-dir {params.in_dir} --merge-max-allele-ct {params.max_allele_ct} --pmerge-output-vzs --out {params.out_stem}
-    """
+        """
 
 # NB: supporting SNPs only atm
 rule pgen_to_hap_and_legend:

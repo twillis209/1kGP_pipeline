@@ -56,3 +56,9 @@ Re: `GWAS_tools` in its own right, I don't use or recommend it anymore and now u
 Including this functionality in the pipeline is arguably scope creep of the type I'd like to avoid, but LD scores are near-ubiquitous these days across analyses downstream of GWAS. Note that I've followed the guidance on the [LDSC GitHub](https://github.com/bulik/ldsc/wiki/LD-Score-Estimation-Tutorial) when calculating the scores, but a more careful approach would probably adjust the window parameter for the MHC and any other regions featuring long-range linkage disequilibrium patterns. I can't guarantee that is sufficient for dealing with the MHC, though: for immune-related phenotypes it contains variants with extremely large effects which may not be handled well by the heritability estimation methods like LDSC or SumHer (the authors of the latter suggest inclusion of fixed effects to account for this).
 
 `plink` does not like inclusion of the pseudoautosomal regions on the X chromosome (it won't work with chromosomes labelled 'PAR1' and 'PAR2'), so I drop these for calculation of LD scores: inclusion of the `sans_pars` token in the `variant_set` wildcard should work.
+
+# Acknowledgements
+
+## Long-range LD regions
+
+The long-range LD region bedfiles are taken from the Meyer lab's [`plinkQC`](https://github.com/meyer-lab-cshl/plinkQC) package. There's a page on these regions, including a nice depiction of their positions in the genome, at the [Abecasis group's wiki](https://genome.sph.umich.edu/wiki/Regions_of_high_linkage_disequilibrium_(LD)). That page cites Carl Anderson's [2010 article](https://www.nature.com/articles/nprot.2010.116) for these regions, but the article is paywalled and the PubMed version doesn't seem to contain a table of the regions.
