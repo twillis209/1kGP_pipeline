@@ -4,3 +4,4 @@ channels:
 dependencies:
 - r-base
 - r-data.table >= 1.17
+- r-ggplot2
