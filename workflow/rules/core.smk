@@ -17,10 +17,10 @@ def get_variant_set_filter_flags(wildcards, input):
     #     plink_flags += f" --exclude {input.snps_to_exclude}"
 
     if 'sans_long_range_ld' in variant_set_options:
-        plink_flags += f" --exclude {input.long_range_ld}"
+        plink_flags += f" --exclude bed1 {input.long_range_ld}"
 
     if 'sans_mhc' in variant_set_options:
-        plink_flags += f" --exclude {input.mhc}"
+        plink_flags += f" --exclude bed1 {input.mhc}"
 
     if 'sans_pars' in variant_set_options:
         plink_flags += f" --not-chr PAR1 PAR2"
