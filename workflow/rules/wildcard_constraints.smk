@@ -8,7 +8,7 @@ wildcard_constraints:
     relatedness = "all|unrelated",
     ancestry = "eur|afr|amr|eas|sas|all",
     #variant_set = rf"^(?:all|(?:{variant_set_flags})(?:_and_(?:{variant_set_flags}))*)$",
-    variant_set = "all|sans_pars_and_sans_long_range_ld",
+    variant_set = "all|sans_mhc|sans_pars_and_sans_long_range_ld",
     variant_type = "all|snps_only",
     window_size = "\\d+",
     r2 = "0_\\d+",

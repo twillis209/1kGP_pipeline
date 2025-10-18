@@ -19,6 +19,9 @@ def get_variant_set_filter_flags(wildcards, input):
     if 'sans_long_range_ld' in variant_set_options:
         plink_flags += f" --exclude {input.long_range_ld}"
 
+    if 'sans_mhc' in variant_set_options:
+        plink_flags += f" --exclude {input.mhc}"
+
     if 'sans_pars' in variant_set_options:
         plink_flags += f" --not-chr PAR1 PAR2"
 
@@ -228,7 +231,8 @@ rule identify_at_gc_snps:
 rule filter_variant_set:
     input:
         pfiles = rules.qc.output,
-        long_range_ld = "resources/1kG/{assembly}/long_range_ld_regions.bed"
+        long_range_ld = "resources/1kG/{assembly}/long_range_ld_regions.bed",
+        mhc = "resources/1kG/{assembly}/mhc.bed"
     output:
         multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam")
     log:
