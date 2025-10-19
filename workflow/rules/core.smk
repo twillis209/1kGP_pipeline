@@ -74,7 +74,7 @@ rule make_1kG_sample_files:
          expand("results/1kG/{{assembly}}/{{relatedness}}/{ancestry}.samples", ancestry = ["eur", "afr", "amr", "eas", "sas", "all"])
      localrule: True
      conda: env_path("r.yaml")
-     script: "scripts/write_1kG_sample_files.R"
+     script: "../scripts/write_1kG_sample_files.R"
 
 rule get_ancestry_specific_samples:
      input:
