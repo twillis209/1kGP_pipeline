@@ -42,5 +42,5 @@ rule plot_scores_on_first_two_pcs:
     output:
         "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/{window_size}_1_{r2}/pca/merged.sscore.png"
     localrule: True
-    conda: env_path("r.yaml")
+    conda: "../envs/r.yaml"
     script: "../scripts/plot_scores_on_first_two_pcs.R"
