@@ -92,22 +92,22 @@ rule get_ancestry_specific_samples:
      shell:
         "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --keep {input.sample_file} --make-pgen vzs --out {params.out_stem}"
 
-# NB: filters for MAF > 0.005
-rule retain_snps_only:
+rule filter_for_snps_and_maf:
     input:
         rules.get_ancestry_specific_samples.output
     output:
-        temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type,snps_only}/{maf}/{chr}", ".pgen", ".pvar.zst", ".psam"))
+        temp(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/{chr}", ".pgen", ".pvar.zst", ".psam"))
     log:
-        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type,snps_only}/{maf}/{chr}.log"
+        "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/{chr}.log"
     params:
         in_stem = subpath(input[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.pgen'),
-        maf = lambda w: float(f"0.{w.maf}")
+        snp_flag = lambda w: "--snps-only 'just-acgt'" if w.variant_type == "snps_only" else "",
+        maf_flag = lambda w: f"--maf 0.{w.maf}" if w.maf != "0" else ""
     threads: 8
     group: "1kG"
     shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs --snps-only 'just-acgt' --rm-dup 'force-first' --maf {params.maf} --make-pgen vzs --out {params.out_stem}"
+        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs {params.snp_flag} --rm-dup 'force-first' {params.maf_flag} --make-pgen vzs --out {params.out_stem}"
 
 rule merge_pgen_files:
     input:
