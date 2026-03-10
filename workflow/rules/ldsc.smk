@@ -36,9 +36,7 @@ rule write_out_bed_format_files_with_cm_field:
     resources:
         runtime = 5
     group: "1kG"
-    conda: env_path("global.yaml")
-    shell:
-        "plink --memory {resources.mem_mb} --threads {threads} --bfile {params.in_stem} --cm-map {params.map_pattern} --make-bed --out {params.out_stem} >{log.log_file}"
+    conda: "global"
 
 rule write_per_chrom_bfiles_for_ld_score_estimation:
     input:
@@ -49,7 +47,7 @@ rule write_per_chrom_bfiles_for_ld_score_estimation:
         in_stem = subpath(input[0], strip_suffix = '.bed'),
         out_stem = subpath(output[0], strip_suffix = '.bed')
     threads: 8
-    conda: env_path("global.yaml")
+    conda: "global"
     shell: "plink2 --memory {resources.mem_mb} --threads {threads} --bfile {params.in_stem} --chr {wildcards.chr_no} --make-bed --out {params.out_stem}"
 
 rule compute_ld_scores:
@@ -65,7 +63,7 @@ rule compute_ld_scores:
     threads: 8
     resources:
         runtime = 10,
-    conda: env_path("ldsc.yaml")
+    conda: "ldsc"
     shell: "ldsc.py --bfile {params.in_stem} --l2 --ld-wind-cm 1 --out {params.out_stem}"
 
 rule compute_all_ld_scores:

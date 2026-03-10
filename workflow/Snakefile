@@ -1,7 +1,7 @@
 from snakemake.utils import min_version
 min_version("9.3")
 
-conda: workflow.source_path("envs/global.yaml")
+conda: "global"
 
 import pandas as pd
 
@@ -9,9 +9,6 @@ configfile: workflow.source_path("config/config.yaml")
 
 def get_vcf_sha256(wildcards):
     return config.get('sha256').get(wildcards.assembly).get(wildcards.chr)
-
-def env_path(env):
-    return os.path.join(workflow.basedir, "envs", env)
 
 include: "rules/wildcard_constraints.smk"
 include: "rules/hg19.smk"

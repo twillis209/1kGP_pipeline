@@ -1,18 +1,23 @@
 # Apptainer / Singularity definition file for 1kGP Snakemake pipeline
 #
-# Bootstraps directly from the Docker image produced by the Dockerfile,
-# or can be built standalone (identical dependency set).
+# Strategy:
+#   - Base env holds only snakemake itself.
+#   - All rule dependencies live in named pre-baked conda envs under
+#     /opt/snakemake-envs: "global" (Python 3), "r" (Python 3), "ldsc" (Python 2).
+#   - The Snakefile references envs by name (conda: "ldsc" etc.) so snakemake
+#     resolves them via --conda-prefix without any yaml hashing.
 #
-# ── Option A: build from the pre-built Docker image ─────────────────────────
-#   apptainer build 1kgp-pipeline.sif docker-daemon://1kgp-pipeline:latest
+# ── Build ────────────────────────────────────────────────────────────────────
+#   Option A: from a locally built Docker image
+#     apptainer build 1kgp-pipeline.sif docker-daemon://1kgp-pipeline:latest
 #
-# ── Option B: build this .def file directly (pulls from Docker Hub base) ────
-#   apptainer build 1kgp-pipeline.sif 1kgp-pipeline.def
+#   Option B: build this .def file directly
+#     apptainer build 1kgp-pipeline.sif 1kgp-pipeline.def
 #
 # ── Run ──────────────────────────────────────────────────────────────────────
 #   apptainer exec --bind "$(pwd)":/pipeline --pwd /pipeline \
 #       1kgp-pipeline.sif \
-#       snakemake --cores <N> <target>
+#       snakemake --cores <N> --use-conda --conda-prefix /opt/snakemake-envs <target>
 #
 # Note: Apptainer automatically binds $HOME and $PWD; use --bind for
 # additional paths (e.g., scratch storage).
@@ -30,19 +35,57 @@ From: condaforge/mambaforge:24.3.0-0
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-    # ── conda packages (all envs merged into base) ───────────────────────
-    # plink/plink2 installed from upstream binaries below (conda is out of date)
+    # ── conda packages (base env: Python 3 tools only) ───────────────────
+    # snakemake itself goes in the base env; all rule deps are in named envs.
     mamba install -y \
         -c conda-forge \
         -c bioconda \
-        "snakemake>=9.3" \
-        pandas \
-        polars \
-        ldsc \
-        r-base \
-        "r-data.table>=1.17" \
-        r-ggplot2 \
+        "snakemake-minimal>=9.6" \
+        "python>=3.11,<3.14" \
     && mamba clean -afy
+
+    # ── pre-bake all conda envs from yaml files ───────────────────────────
+    # Named envs are referenced directly in the Snakefile (conda: "global" etc.)
+    # so snakemake finds them without hashing yaml files.
+    # Yaml content is inlined here to avoid any build-context path issues.
+    mkdir -p /tmp/envs
+
+    cat > /tmp/envs/global.yaml << 'EOF'
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - pandas
+  - polars
+EOF
+
+    cat > /tmp/envs/r.yaml << 'EOF'
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base
+  - r-data.table >= 1.17
+  - r-ggplot2
+EOF
+
+    cat > /tmp/envs/ldsc.yaml << 'EOF'
+name: ldsc
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - ldsc
+EOF
+
+    mamba env create -p /opt/snakemake-envs/global \
+        --file /tmp/envs/global.yaml \
+    && mamba env create -p /opt/snakemake-envs/r \
+        --file /tmp/envs/r.yaml \
+    && mamba env create -p /opt/snakemake-envs/ldsc \
+        --file /tmp/envs/ldsc.yaml \
+    && mamba clean -afy \
+    && rm -rf /tmp/envs
 
     # ── plink2 and plink1 binaries ────────────────────────────────────────
     wget -q -O /tmp/plink2.zip \
@@ -57,7 +100,6 @@ From: condaforge/mambaforge:24.3.0-0
     && rm /tmp/plink.zip
 
 %environment
-    # Activate base conda environment
     export PATH="/opt/conda/bin:$PATH"
     export CONDA_DEFAULT_ENV=base
 
@@ -68,13 +110,19 @@ From: condaforge/mambaforge:24.3.0-0
 %help
     Snakemake pipeline container for 1000 Genomes Project data processing.
 
-    Included tools:
-      snakemake >=9.3, plink, plink2, ldsc, R (data.table, ggplot2),
-      Python (pandas, polars), wget, zstd
+    Included tools (base env):
+      snakemake >=9.3, plink, plink2, R (data.table, ggplot2),
+      Python 3 (pandas, polars), wget, zstd
 
-    Example usage:
+    Isolated conda envs (pre-baked at /opt/snakemake-envs):
+      global  — pandas, polars, plink, plink2   (Python 3)
+      r       — r-base, r-data.table, r-ggplot2 (Python 3)
+      ldsc    — ldsc                             (Python 2)
+
+    Run with --use-conda --conda-prefix so snakemake activates the right env
+    per rule (conda directives reference env names, not yaml paths):
+
       apptainer exec --bind "$(pwd)":/pipeline --pwd /pipeline \
           1kgp-pipeline.sif \
-          snakemake --cores 8 --rerun-incomplete <target>
-
-    Because all dependencies are bundled, run snakemake WITHOUT --use-conda.
+          snakemake --cores 8 --use-conda --conda-prefix /opt/snakemake-envs \
+                    --rerun-incomplete <target>
