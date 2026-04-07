@@ -21,7 +21,7 @@ The `assembly` wildcard allows you to specify either the `hg19` or `hg38` refere
 
 Dependencies like `plink`, `plink2`, and `pandas` are managed with `conda`. `snakemake` should build the environments automatically, although in my experience it's quite slow in doing so compared with running `conda` in other contexts.
 
-An earlier version of the pipeline used `docker` instead, but I no longer maintain the `docker` branch on which this resides. The image was derived from the [`rocker/r-ver` image](https://rocker-project.org/images/versioned/r-ver). The pipeline now ships a `Dockerfile` (based on `condaforge/mambaforge`) which is built automatically and pushed to the GitHub Container Registry. You can use the image directly with Docker or pull it into Apptainer with `apptainer pull docker://ghcr.io/twillis209/1kgp-pipeline:latest`.
+The `containers` branch has a `Dockerfile` (based on `condaforge/mambaforge`) which is built automatically and pushed to the GitHub Container Registry. The `Snakefile` on that branch has a `container` directive which should see the image pulled automatically. This container doesn't package `snakemake`, which needs to be available in the environment in which invoke it.
 
 `pandas` is required for some `run` rules and this is provided in the `conda` environment defined in `envs/global.yaml`.
 
