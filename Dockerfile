@@ -37,7 +37,7 @@ RUN mamba env create -p /opt/snakemake-envs/global --file /tmp/envs/global.yaml 
 
 # plink2 and plink binaries
 RUN wget -q -O /tmp/plink2.zip \
-        https://s3.amazonaws.com/plink2-assets/plink2_linux_x86_64_20260310.zip \
+        https://s3.amazonaws.com/plink2-assets/plink2_linux_x86_64_20260311.zip \
     && unzip -j /tmp/plink2.zip plink2 -d /usr/local/bin \
     && chmod +x /usr/local/bin/plink2 \
     && rm /tmp/plink2.zip \
