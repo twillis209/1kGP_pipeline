@@ -14,11 +14,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Base conda env: snakemake + python
+# Base conda env: python
 RUN mamba install -y \
         -c conda-forge \
-        -c bioconda \
-        "snakemake-minimal>=9.6" \
         "python>=3.11,<3.14" \
     && mamba clean -afy
 
