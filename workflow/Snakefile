@@ -1,6 +1,8 @@
 from snakemake.utils import min_version
 min_version("9.3")
 
+container: "docker://ghcr.io/twillis209/1kgp-pipeline:latest"
+
 conda: "global"
 
 import pandas as pd
