@@ -1,0 +1,8 @@
+results/
+*.vcf.gz
+*.vcf.gz.csi
+*.bim
+*.bed
+*.fam
+*.sif
+.worktrees/

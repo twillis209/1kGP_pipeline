@@ -23,14 +23,11 @@ RUN mamba install -y \
     && mamba clean -afy
 
 # Pre-bake all conda environments
-RUN mkdir -p /tmp/envs && \
-    printf 'channels:\n  - conda-forge\n  - bioconda\ndependencies:\n  - pandas\n  - polars\n' \
-        > /tmp/envs/global.yaml && \
-    printf 'channels:\n  - conda-forge\n  - bioconda\ndependencies:\n  - r-base\n  - r-data.table >= 1.17\n  - r-ggplot2\n' \
-        > /tmp/envs/r.yaml && \
-    printf 'name: ldsc\nchannels:\n  - conda-forge\n  - bioconda\ndependencies:\n  - python>=3.9,<3.14\n  - numpy\n  - scipy\n  - pandas\n  - bitarray\n  - pybedtools\n  - setuptools\n  - pip\n' \
-        > /tmp/envs/ldsc.yaml && \
-    mamba env create -p /opt/snakemake-envs/global --file /tmp/envs/global.yaml && \
+COPY workflow/envs/global.yaml /tmp/envs/global.yaml
+COPY workflow/envs/r.yaml      /tmp/envs/r.yaml
+COPY workflow/envs/ldsc.yaml   /tmp/envs/ldsc.yaml
+
+RUN mamba env create -p /opt/snakemake-envs/global --file /tmp/envs/global.yaml && \
     mamba env create -p /opt/snakemake-envs/r     --file /tmp/envs/r.yaml     && \
     mamba env create -p /opt/snakemake-envs/ldsc  --file /tmp/envs/ldsc.yaml  && \
     /opt/snakemake-envs/ldsc/bin/pip install --no-deps \
@@ -50,5 +47,4 @@ RUN wget -q -O /tmp/plink2.zip \
     && chmod +x /usr/local/bin/plink \
     && rm /tmp/plink.zip
 
-ENV PATH="/opt/conda/bin:$PATH"
 ENV CONDA_DEFAULT_ENV=base

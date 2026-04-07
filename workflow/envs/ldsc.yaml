@@ -10,3 +10,4 @@ dependencies:
   - bitarray
   - pybedtools
   - setuptools
+  - pip
