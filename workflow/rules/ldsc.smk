@@ -36,7 +36,6 @@ rule write_out_bed_format_files_with_cm_field:
     resources:
         runtime = 5
     group: "1kG"
-    conda: "global"
 
 rule write_per_chrom_bfiles_for_ld_score_estimation:
     input:
@@ -47,7 +46,6 @@ rule write_per_chrom_bfiles_for_ld_score_estimation:
         in_stem = subpath(input[0], strip_suffix = '.bed'),
         out_stem = subpath(output[0], strip_suffix = '.bed')
     threads: 8
-    conda: "global"
     shell: "plink2 --memory {resources.mem_mb} --threads {threads} --bfile {params.in_stem} --chr {wildcards.chr_no} --make-bed --out {params.out_stem}"
 
 rule compute_ld_scores:

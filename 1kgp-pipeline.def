@@ -31,6 +31,7 @@ From: condaforge/mambaforge:24.3.0-0
         wget \
         unzip \
         zstd \
+        git \
         ca-certificates \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -75,7 +76,14 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - ldsc
+  - python>=3.9,<3.14
+  - numpy
+  - scipy
+  - pandas
+  - bitarray
+  - pybedtools
+  - setuptools
+  - pip
 EOF
 
     mamba env create -p /opt/snakemake-envs/global \
@@ -84,16 +92,18 @@ EOF
         --file /tmp/envs/r.yaml \
     && mamba env create -p /opt/snakemake-envs/ldsc \
         --file /tmp/envs/ldsc.yaml \
+    && /opt/snakemake-envs/ldsc/bin/pip install --no-deps \
+        git+https://github.com/bulik/ldsc.git \
     && mamba clean -afy \
     && rm -rf /tmp/envs
 
     # ── plink2 and plink1 binaries ────────────────────────────────────────
-    wget -q -O /tmp/plink2.zip \
-        https://s3.amazonaws.com/plink2-assets/plink2_linux_x86_64_20260307.zip \
+    wget -O /tmp/plink2.zip \
+        https://s3.amazonaws.com/plink2-assets/plink2_linux_x86_64_20260310.zip \
     && unzip -j /tmp/plink2.zip plink2 -d /usr/local/bin \
     && chmod +x /usr/local/bin/plink2 \
     && rm /tmp/plink2.zip \
-    && wget -q -O /tmp/plink.zip \
+    && wget -O /tmp/plink.zip \
         https://s3.amazonaws.com/plink1-assets/plink_linux_x86_64_20250819.zip \
     && unzip -j /tmp/plink.zip plink -d /usr/local/bin \
     && chmod +x /usr/local/bin/plink \
@@ -117,7 +127,7 @@ EOF
     Isolated conda envs (pre-baked at /opt/snakemake-envs):
       global  — pandas, polars, plink, plink2   (Python 3)
       r       — r-base, r-data.table, r-ggplot2 (Python 3)
-      ldsc    — ldsc                             (Python 2)
+      ldsc    — ldsc                             (Python 3)
 
     Run with --use-conda --conda-prefix so snakemake activates the right env
     per rule (conda directives reference env names, not yaml paths):

@@ -1,6 +1,12 @@
 name: ldsc
 channels:
-- conda-forge
-- bioconda
+  - conda-forge
+  - bioconda
 dependencies:
-- ldsc
+  - python>=3.9,<3.14
+  - numpy
+  - scipy
+  - pandas
+  - bitarray
+  - pybedtools
+  - setuptools
