@@ -113,7 +113,7 @@ rule merge_pgen_files:
     input:
         expand("results/1kG/{{assembly}}/{{relatedness}}/{{ancestry}}/{{variant_type}}/{{maf}}/{chr}.{ext}", chr = [f"chr{x}" for x in range(1,23)]+["chrX"], ext = ["pgen", "pvar.zst", "psam"])
     output:
-        pfiles = protected(multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/merged", ".pgen", ".pvar.zst", ".psam")),
+        pfiles = multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/merged", ".pgen", ".pvar.zst", ".psam"),
         pmerge_file = "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/pmerge.txt"
     log:
         "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/merged.log"

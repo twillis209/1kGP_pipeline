@@ -7,3 +7,4 @@ submit_with_scheduling.sh
 profile
 .wget-hsts
 *.pdf
+.worktrees/
