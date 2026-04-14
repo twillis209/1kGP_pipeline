@@ -3,7 +3,7 @@ min_version("9.3")
 
 container: "docker://ghcr.io/twillis209/1kgp-pipeline:latest"
 
-conda: "envs/global.yaml"
+# conda: workflow.source_path("envs/global.yaml")
 
 import pandas as pd
 
