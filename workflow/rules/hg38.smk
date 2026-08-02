@@ -74,8 +74,8 @@ rule download_hg38_recombination_map:
 # From the plinkQC package
 rule download_hg38_long_range_ld_regions:
     output:
-        "resources/1kG/hg38/long_range_ld_regions.bed"
+        ensure("resources/1kG/hg38/long_range_ld_regions.bed", sha256 = "6e2ba6abf0151209ed71f632c736f841a2f84e25aff17d1d169ffe52a62ee177")
     params:
-        url = "https://raw.githubusercontent.com/meyer-lab-cshl/plinkQC/refs/heads/master/inst/extdata/high-LD-regions-hg38-GRCh38.bed"
+        url = "https://raw.githubusercontent.com/meyer-lab-cshl/plinkQC/43a07bdd330c42533ced961df6e25590dd15f45e/inst/extdata/high-LD-regions-hg38-GRCh38.bed"
     localrule: True
     shell: "wget -O {output} {params.url}"

@@ -70,8 +70,8 @@ rule download_hg19_recombination_map:
 # From the plinkQC package
 rule download_hg19_long_range_ld_regions:
     output:
-        "resources/1kG/hg19/long_range_ld_regions.bed"
+        ensure("resources/1kG/hg19/long_range_ld_regions.bed", sha256 = "1287182d2e75c18bf0c40b1cc2eab68f7b85dd29616629c55211c2bdde5c132f")
     params:
-        url = "https://raw.githubusercontent.com/meyer-lab-cshl/plinkQC/refs/heads/master/inst/extdata/high-LD-regions-hg19-GRCh37.bed"
+        url = "https://raw.githubusercontent.com/meyer-lab-cshl/plinkQC/43a07bdd330c42533ced961df6e25590dd15f45e/inst/extdata/high-LD-regions-hg19-GRCh37.bed"
     localrule: True
     shell: "wget -O {output} {params.url}"

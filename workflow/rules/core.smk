@@ -1,5 +1,32 @@
 import polars as pl
 
+# The MHC interval is shipped with the workflow rather than downloaded, so it
+# has to be resolved through the source cache: a `resources/...` string would
+# only exist for someone who has cloned this repo, not for a workflow that
+# imports this one as a module.
+mhc_bed = {
+    assembly: workflow.source_path(f"../resources/1kG/{assembly}/mhc.bed")
+    for assembly in ["hg19", "hg38"]
+}
+
+def get_variant_set_filter_inputs(wildcards):
+    """
+    Returns only the interval files the requested variant set actually filters
+    on, so that e.g. a 'sans_mhc' run does not pull down the long-range LD
+    regions it will never use.
+    """
+    variant_set_options = wildcards.variant_set.split("_and_")
+
+    inputs = {}
+
+    if 'sans_long_range_ld' in variant_set_options:
+        inputs['long_range_ld'] = f"resources/1kG/{wildcards.assembly}/long_range_ld_regions.bed"
+
+    if 'sans_mhc' in variant_set_options:
+        inputs['mhc'] = mhc_bed[wildcards.assembly]
+
+    return inputs
+
 def get_variant_set_filter_flags(wildcards, input):
     """
     Returns a string of plink2 flags for variant set filtering
@@ -230,15 +257,14 @@ rule identify_at_gc_snps:
 
 rule filter_variant_set:
     input:
-        pfiles = rules.qc.output,
-        long_range_ld = "resources/1kG/{assembly}/long_range_ld_regions.bed",
-        mhc = "resources/1kG/{assembly}/mhc.bed"
+        unpack(get_variant_set_filter_inputs),
+        pfiles = rules.qc.output
     output:
         multiext("results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged", ".pgen", ".pvar.zst", ".psam")
     log:
         "results/1kG/{assembly}/{relatedness}/{ancestry}/{variant_type}/{maf}/qc/{variant_set}/merged.log"
     params:
-        in_stem = subpath(input[0], strip_suffix = '.pgen'),
+        in_stem = lambda w, input: subpath(input.pfiles[0], strip_suffix = '.pgen'),
         out_stem = subpath(output[0], strip_suffix = '.pgen'),
         filter_flags = lambda w, input: get_variant_set_filter_flags(w, input)
     threads: 16
