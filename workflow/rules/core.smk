@@ -61,7 +61,13 @@ rule make_1kG_sex_file:
         "results/1kG/{assembly}/sex.tsv"
     localrule: True
     run:
-        ped = pd.read_csv(input[0], sep = ' ', header = 0)
+        # The hg19 ped file (from the older 1000G metadata endpoint) is tab-delimited
+        # and has free-text columns (e.g. "Other Comments") that can contain spaces;
+        # the hg38 ped file (from the newer 1000G_2504_high_coverage population file)
+        # is genuinely space-delimited with no free-text columns. sep = ' ' on the
+        # hg19 file mis-parses any row whose comment field contains a space.
+        sep = '\t' if wildcards.assembly == 'hg19' else ' '
+        ped = pd.read_csv(input[0], sep = sep, header = 0)
 
         if wildcards.assembly == 'hg19':
             ped = ped[['Family ID', 'Individual ID', 'Gender']]
