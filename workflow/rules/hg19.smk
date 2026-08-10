@@ -11,17 +11,27 @@ rule download_hg19_variant_reference:
 
 rule download_hg19_reference_sequence:
     output:
-        ensure("resources/genome_reference/hg19.fa.zst", sha256 = "32f65df649ae46813bad00fee998542c7fd121aa9d01659e950ac307f2502693")
+        "resources/genome_reference/hg19.fa.zst"
     params:
         compressed = "resources/genome_reference/hg19.fa.gz",
         uncompressed = "resources/genome_reference/hg19.fa",
-        url = "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/phase2_reference_assembly_sequence/hs37d5.fa.gz"
+        url = "http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/phase2_reference_assembly_sequence/hs37d5.fa.gz",
+        # sha256 of the decompressed hs37d5.fa itself, not the .zst: zstd's compressed
+        # bytes aren't guaranteed stable across versions for identical input, so a
+        # checksum on the .zst (the previous approach, via ensure()) fails depending on
+        # which zstd built the image. The download over this network path has also been
+        # observed to silently corrupt (wget exits 0, gzip -t then fails) with both
+        # ftp:// and http://, hence the sha256 check plus retries below.
+        sha256 = "65add55817fc9a5de8221caf36e84bf8670f94bef9cff7889093692b271a765d"
     localrule: True
+    retries: 3
     shell:
         """
+        rm -f {params.compressed} {params.uncompressed}
         wget -O {params.compressed} {params.url}
-        gunzip {params.compressed}
-        zstd --rm {params.uncompressed}
+        gunzip -f {params.compressed}
+        echo "{params.sha256}  {params.uncompressed}" | sha256sum -c -
+        zstd -f --rm {params.uncompressed}
         """
 
 rule download_1kG_hg19_genotype_data:
