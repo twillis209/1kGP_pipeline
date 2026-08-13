@@ -140,7 +140,16 @@ rule filter_for_snps_and_maf:
     threads: 8
     group: "1kG"
     shell:
-        "plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs {params.snp_flag} --rm-dup 'force-first' {params.maf_flag} --make-pgen vzs --out {params.out_stem}"
+        # mkdir explicitly rather than relying on Snakemake's host-side directory
+        # creation: on this setup (Lima VM + apptainer), a freshly-created output
+        # directory is not always visible yet from inside the container by the time
+        # the shell command starts, and plink2 fails outright (can't even open its
+        # own log file) rather than something retries or --latency-wait can paper
+        # over, since it happens before the job's own retry-relevant work starts.
+        """
+        mkdir -p $(dirname {output[0]})
+        plink2 --memory {resources.mem_mb} --threads {threads} --pfile {params.in_stem} vzs {params.snp_flag} --rm-dup 'force-first' {params.maf_flag} --make-pgen vzs --out {params.out_stem}
+        """
 
 rule merge_pgen_files:
     input:
